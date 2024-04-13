@@ -16,7 +16,7 @@ export class PageScraper {
 	}
 
 	// TODO: // use formatter
-	formatHtml(html) {
+	formatHtml(html: string) {
 		return html;
 	}
 }

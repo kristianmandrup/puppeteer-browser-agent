@@ -6,12 +6,10 @@ export class HtmlFormatter {
 
 	constructor(html: string) {
 		this.html = html;
+		const cleanHtml = this.html.replace(/<\//g, " </");
+		this.$ = cheerio.load(cleanHtml);
 	}
 
-	load() {
-		const html = this.html.replace(/<\//g, " </");
-		this.$ = cheerio.load(html);
-	}
 	get prioritySelectors() {
 		return [
 			"main",

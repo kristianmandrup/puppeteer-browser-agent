@@ -1,10 +1,10 @@
-export type IQuestionFn = (text: string): Promise<string>;
+export type IQuestionFn = (text: string) => Promise<string>;
 
 export interface ITerminalReader {
-	question: IQuestionFn
+	question: IQuestionFn;
 }
 
-export type ICreateTerminalReader = () => ITerminalReader
+export type ICreateTerminalReader = () => ITerminalReader;
 
 export class TerminalInputController {
 	createReader: ICreateTerminalReader;
@@ -27,6 +27,6 @@ export class TerminalInputController {
 
 	async execute(text: string) {
 		const reader: ITerminalReader = this.createReader();
-		return await reader.question(text)
+		return await reader.question(text);
 	}
 }

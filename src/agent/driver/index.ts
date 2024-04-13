@@ -1,35 +1,42 @@
 import type { HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser } from "../browser.js";
-import fs from 'node:fs'
+import fs from "node:fs";
 import type { DebugOpts } from "../../types.js";
 import { ElementSelector } from "../../elements/selector.js";
 import type { IDriverAction } from "./actions/base-action.js";
+import { PageScraper } from "./document/page-scraper.js";
+import { MessageBuilder } from "./message/message-builder.js";
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-export type Context = any[]
+export type Context = any[];
+export type StructuredMsg = {
+	content: string;
+	url: string;
+};
 
-export type FnArgs = Record<string, string>
-export type DriverOpts = DebugOpts
+export type FnArgs = Record<string, string>;
+export type DriverOpts = DebugOpts;
 
 export class AgentDriver {
 	browser: AgentBrowser;
-	page?: Page	
-	message?: string
-	contextLengthLimit = 4000
-	chatMsg?: string
+	page?: Page;
+	message?: string;
+	contextLengthLimit = 4000;
+	chatMsg?: string;
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	fn?: any
-	fnName = ""
-	fnArgs: FnArgs = {}
-	autopilot = false
+	fn?: any;
+	fnName = "";
+	fnArgs: FnArgs = {};
+	autopilot = false;
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	aiMsg?: any
-	debug = false
-	noContent = false
+	aiMsg?: any;
+	debug = false;
+	noContent = false;
 
-	context?: string
-	elementSelector?: ElementSelector
+	context?: string[] = [];
+	elementSelector?: ElementSelector;
+	messageBuilder: MessageBuilder = new MessageBuilder();
 
-	actions: Record<string, IDriverAction> = {}
+	actions: Record<string, IDriverAction> = {};
 
 	constructor(opts: DriverOpts = {}) {
 		this.debug = Boolean(opts.debug);
@@ -37,34 +44,34 @@ export class AgentDriver {
 	}
 
 	registerAction(label: string, action: IDriverAction) {
-		this.actions[label] = action
+		this.actions[label] = action;
 	}
 
 	removeAction(label: string) {
-		delete this.actions[label]
+		delete this.actions[label];
 	}
 
-	async run(context: string, response: HTTPResponse) {
-		this.context = context
+	async run(context: string[], response: HTTPResponse) {
+		this.context = context;
 		this.page = await this.browser.start();
 		if (!this.page) {
-			throw new Error('No page')
+			throw new Error("No page");
 		}
-		this.initialize()
+		this.initialize();
 		await this.doStep(context, response, [], null);
 
 		this.browser.close();
 	}
 
-	initialize() {		
+	initialize() {
 		if (!this.page) {
-			throw new Error('No page')
+			throw new Error("No page");
 		}
-		this.elementSelector = new ElementSelector(this.page)
+		this.elementSelector = new ElementSelector(this.page);
 	}
 
 	protected parseArgs() {
-		const fn = this.fn
+		const fn = this.fn;
 		try {
 			return JSON.parse(fn.arguments);
 		} catch (e) {
@@ -74,26 +81,35 @@ export class AgentDriver {
 				};
 			}
 		}
-		
 	}
 
-	performAction(fnName: string) {
-		if (fnName === "make_plan") {
-			this.communicateMessage("OK. Please continue according to the plan");
-		} else if (fnName === "read_file") {
-			this.readFile();
-		} else if (fnName === "goto_url") {
-			this.gotoUrl();
-		} else if (fnName === "click_link") {
-			this.clickLink()
-		} else if (fnName === "type_text") {
-			this.typeText()
-		} else if (fnName === "answer_user") {
-			this.answerUser()
-		} else {
-			this.communicateMessage("That is an unknown function. Please call another one");
-		}		
-	}	
+	handleAction(actionName: string) {
+		this.performAction(actionName) || this.defaultAction();
+	}
+
+	defaultAction() {
+		this.communicateMessage(
+			"That is an unregistered or invalid action. Please use a valid one",
+		);
+	}
+
+	findAction(label: string): IDriverAction {
+		const action = this.actions[label];
+		if (!action) {
+			throw new Error(`Action ${label} is not registered`);
+		}
+		return action;
+	}
+
+	performAction(label: string) {
+		try {
+			const action = this.findAction(label);
+			action.execute();
+			return true;
+		} catch (_err) {
+			return false;
+		}
+	}
 
 	communicateMessage(msg: string) {
 		let message = msg;
@@ -106,20 +122,19 @@ export class AgentDriver {
 				message: message,
 			}),
 		};
-
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	doFunction(nextStep: any) {
 		if (!nextStep.function_call) {
-			return false
+			return false;
 		}
 		this.fn = nextStep.function_call;
 		this.fnName = this.fn.name;
-			
-		this.parseArgs()
-		this.performAction(this.fnName)
-		return true
+
+		this.parseArgs();
+		this.performAction(this.fnName);
+		return true;
 	}
 
 	printCurrentCost() {
@@ -127,7 +142,7 @@ export class AgentDriver {
 	}
 
 	get autopilotOn() {
-		return this.autopilot
+		return this.autopilot;
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -139,42 +154,39 @@ export class AgentDriver {
 		if (nextContent === "") {
 			nextContent = "<empty response>";
 		}
-		await this.setAiMessage(nextContent)
+		await this.setAiMessage(nextContent);
 	}
 
 	async createMessage(content: string) {
 		if (this.autopilotOn) {
-			return await this.getInput(
-				`<!_RESPONSE_!>${JSON.stringify(content)}\n`,
-			);
-		} 
+			return await this.getInput(`<!_RESPONSE_!>${JSON.stringify(content)}\n`);
+		}
 		// biome-ignore lint/style/useTemplate: <explanation>
 		return await this.getInput("GPT: " + content + "\nYou: ");
-
 	}
 
 	// TODO: override
 	// biome-ignore lint/suspicious/useAwait: <explanation>
 	async getInput(msg: string) {
-		return msg
+		return msg;
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	async setAiMessage(nextContent: string) {
-		this.message = await this.createMessage(nextContent)
+		this.message = await this.createMessage(nextContent);
 		this.aiMsg = {
 			role: "user",
 			content: this.message,
-		};				
+		};
 	}
 
 	// override
 	sendMessage(msg: string) {
-		console.info('send', msg)
+		console.info("send", msg);
 	}
 
 	async doStep(
-		context: string,
+		context: string[],
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		nextStep: any,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -184,68 +196,69 @@ export class AgentDriver {
 	) {
 		this.noContent = false;
 
-		this.doFunction(nextStep) || this.notFunction(nextStep)
-		this.performInteraction()
-		this.logInfo()
+		this.doFunction(nextStep) || this.notFunction(nextStep);
+		this.performInteraction();
+		this.logInfo();
 
 		await this.doStep(context, nextStep, linksAndInputs, element);
 	}
 
 	logInfo() {
 		if (!this.debug) {
-			return
+			return;
 		}
 		fs.writeFileSync("context.json", JSON.stringify(this.context, null, 2));
 	}
 
 	hasContent() {
-		return !this.noContent
+		return !this.noContent;
 	}
 
-	performInteraction() {
-		if (!this.hasContent()) {
-			const pageContent = await getPageContent(page);
-			msg.content += `\n\n${pageContent.substring(0, context_length_limit)}`;
+	get pageScraper() {
+		return new PageScraper();
+	}
+
+	async getPageContent() {
+		if (!this.page) {
+			throw new Error("Missing page for scraping");
 		}
+		return await this.pageScraper.getPageContent(this.page);
+	}
 
-		msg.url = await page.url();
+	addPageContent(pageContent: string) {
+		const content = `\n\n${pageContent.substring(0, this.contextLengthLimit)}`;
+		this.messageBuilder.addContent(content);
+	}
 
-		nextStep = await sendContextualMessage(msg, context);
+	get msg(): StructuredMsg {
+		return this.messageBuilder.message;
+	}
 
-		(msg.content = message), context.push(msg);
-		context.push(nextStep);
+	async performInteraction() {
+		if (!this.hasContent()) {
+			const pageContent = await this.getPageContent();
+			this.addPageContent(pageContent);
+		}
+		const url = await this.page?.url();
+		url && this.messageBuilder.setUrl(url);
+
+		const nextStep = await this.sendContextualMessage(this.msg, this.context);
+		this.messageBuilder.setContent(this.message);
+
+		this.addToContext(this.msg);
+		this.addToContext(nextStep);
+	}
+
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	addToContext(data: any) {
+		this.context?.push(data);
 	}
 
 	// TODO
-	async sendContextualMessage(msg: any, context: any) {
-
-	}
-
-	gotoUrl() {
-		this.actionFor('goto_url').execute()
-	}	
-
-	findAction(label: string): IDriverAction {
-		const action = this.actions[label]
-		if (!action) {
-			throw new Error(`Action ${label} is not registered`)
-		}
-		return action
-	}
-
-	actionFor(label: string) {
-		return this.findAction(label)
-	}
-
-	typeText() {
-		this.actionFor('type_text').execute()
-	}
-
-	answerUser() {
-		this.actionFor('answer_user').execute()
-	}
-
-	clickLink() {
-		this.actionFor('click_link').execute()
+	async sendContextualMessage(
+		_structuredMsg: StructuredMsg,
+		_context: string[] = [],
+	) {
+		//
 	}
 }

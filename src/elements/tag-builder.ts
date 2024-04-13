@@ -1,4 +1,4 @@
-import cheerio, { load } from "cheerio";
+import cheerio from "cheerio";
 const $ = cheerio;
 
 type Obj = Record<string, string | undefined>;
