@@ -1,13 +1,18 @@
 import type { HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser } from "../browser.js";
 import fs from 'node:fs'
-import { DebugOpts } from "../../types.js";
+import type { DebugOpts } from "../../types.js";
+import { ElementSelector } from "../../elements/selector.js";
+import type { IDriverAction } from "./actions/base-action.js";
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+export type Context = any[]
 
 export type FnArgs = Record<string, string>
 export type DriverOpts = DebugOpts
 
 export class AgentDriver {
-	browser: AgentBrowser;	
+	browser: AgentBrowser;
+	page?: Page	
 	message?: string
 	contextLengthLimit = 4000
 	chatMsg?: string
@@ -19,17 +24,43 @@ export class AgentDriver {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	aiMsg?: any
 	debug = false
+	noContent = false
+
+	context?: string
+	elementSelector?: ElementSelector
+
+	actions: Record<string, IDriverAction> = {}
 
 	constructor(opts: DriverOpts = {}) {
 		this.debug = Boolean(opts.debug);
 		this.browser = new AgentBrowser();
 	}
 
+	registerAction(label: string, action: IDriverAction) {
+		this.actions[label] = action
+	}
+
+	removeAction(label: string) {
+		delete this.actions[label]
+	}
+
 	async run(context: string, response: HTTPResponse) {
-		const page = await this.browser.start();
-		await this.doStep(page, context, response, [], null);
+		this.context = context
+		this.page = await this.browser.start();
+		if (!this.page) {
+			throw new Error('No page')
+		}
+		this.initialize()
+		await this.doStep(context, response, [], null);
 
 		this.browser.close();
+	}
+
+	initialize() {		
+		if (!this.page) {
+			throw new Error('No page')
+		}
+		this.elementSelector = new ElementSelector(this.page)
 	}
 
 	protected parseArgs() {
@@ -137,8 +168,12 @@ export class AgentDriver {
 		};				
 	}
 
+	// override
+	sendMessage(msg: string) {
+		console.info('send', msg)
+	}
+
 	async doStep(
-		page: Page,
 		context: string,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		nextStep: any,
@@ -147,186 +182,70 @@ export class AgentDriver {
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		element: any,
 	) {
-		let noContent = false;
+		this.noContent = false;
 
 		this.doFunction(nextStep) || this.notFunction(nextStep)
 		this.performInteraction()
 		this.logInfo()
 
-		await this.doStep(page, context, nextStep, linksAndInputs, element);
+		await this.doStep(context, nextStep, linksAndInputs, element);
 	}
 
 	logInfo() {
 		if (!this.debug) {
 			return
 		}
-		fs.writeFileSync("context.json", JSON.stringify(context, null, 2));
+		fs.writeFileSync("context.json", JSON.stringify(this.context, null, 2));
+	}
+
+	hasContent() {
+		return !this.noContent
 	}
 
 	performInteraction() {
-		if (noContent !== true) {
-			const page_content = await get_page_content(page);
-			msg.content += "\n\n" + page_content.substring(0, context_length_limit);
+		if (!this.hasContent()) {
+			const pageContent = await getPageContent(page);
+			msg.content += `\n\n${pageContent.substring(0, context_length_limit)}`;
 		}
 
 		msg.url = await page.url();
 
-		nextStep = await send_chat_message(msg, context);
+		nextStep = await sendContextualMessage(msg, context);
 
 		(msg.content = message), context.push(msg);
 		context.push(nextStep);
-
 	}
 
-	async shouldReadFile() {
-		return (
-			autopilot ||
-			(await input(
-				"\nGPT: I want to read the file " +
-					filename +
-					"\nDo you allow this? (y/n): ",
-			)) == "y"
-		);
-	}
+	// TODO
+	async sendContextualMessage(msg: any, context: any) {
 
-	async readFile() {
-		let filename = fnArgs.filename;
-		if (await this.shouldReadFile()) {
-			print();
-			print(task_prefix + "Reading file " + filename);
-
-			if (fs.existsSync(filename)) {
-				let file_data = fs.readFileSync(filename, "utf-8");
-				file_data = file_data.substring(0, context_length_limit);
-				message = file_data;
-			} else {
-				message = "ERROR: That file does not exist";
-			}
-		} else {
-			print();
-			message = "ERROR: You are not allowed to read this file";
-		}
 	}
 
 	gotoUrl() {
-		let url = fnArgs.url;
-
-		print(task_prefix + "Going to " + url);
-
-		try {
-			await page.goto(url, {
-				waitUntil: wait_until,
-			});
-
-			url = await page.url();
-
-			message = `You are now on ${url}`;
-		} catch (error) {
-			message = check_download_error(error);
-			message = message ?? "There was an error going to the URL";
-		}
-
-		print(task_prefix + "Scraping page...");
-		linksAndInputs = await get_tabbable_elements(page);
+		this.actionFor('goto_url').execute()
 	}	
 
+	findAction(label: string): IDriverAction {
+		const action = this.actions[label]
+		if (!action) {
+			throw new Error(`Action ${label} is not registered`)
+		}
+		return action
+	}
+
+	actionFor(label: string) {
+		return this.findAction(label)
+	}
+
 	typeText() {
-		let form_data = fnArgs.form_data;
-		let prev_input;
-
-		for (let data of form_data) {
-			let element_id = data.pgpt_id;
-			let text = data.text;
-
-			message = "";
-
-			try {
-				element = await page.$(".pgpt-element" + element_id);
-
-				if (!prev_input) {
-					prev_input = element;
-				}
-
-				const name = await element.evaluate((el) => {
-					return el.getAttribute("name");
-				});
-
-				const type = await element.evaluate((el) => {
-					return el.getAttribute("type");
-				});
-
-				const tagName = await element.evaluate((el) => {
-					return el.tagName;
-				});
-
-				// ChatGPT sometimes tries to type empty string
-				// to buttons to click them
-				if (
-					tagName === "BUTTON" ||
-					type === "submit" ||
-					type === "button"
-				) {
-					fnArgs.submit = true;
-				} else {
-					prev_input = element;
-					await element.type(text);
-					let sanitized = text.replace("\n", " ");
-					print(task_prefix + `Typing "${sanitized}" to ${name}`);
-					message += `Typed "${text}" to input field "${name}"\n`;
-				}
-			} catch (error) {
-				if (debug) {
-					print(error);
-				}
-				message += `Error typing "${text}" to input field ID ${data.element_id}\n`;
-			}
-		}
-
-		if (fnArgs.submit !== false) {
-			print(task_prefix + `Submitting form`);
-
-			try {
-				const form = await prev_input.evaluateHandle((input) =>
-					input.closest("form"),
-				);
-
-				await form.evaluate((form) => form.submit());
-				await wait_for_navigation(page);
-
-				let url = await page.url();
-
-				message += `Form sent! You are now on ${url}\n`;
-			} catch (error) {
-				if (debug) {
-					print(error);
-				}
-				print(task_prefix + `Error submitting form`);
-				message += "There was an error submitting the form.\n";
-			}
-
-			print(task_prefix + "Scraping page...");
-			linksAndInputs = await get_tabbable_elements(page);
-		}
+		this.actionFor('type_text').execute()
 	}
 
 	answerUser() {
-		let text = fnArgs.answer;
-
-		if (!text) {
-			text = fnArgs.summary;
-		}
-
-		print_current_cost();
-
-		if (autopilot) {
-			message = await input("<!_RESPONSE_!>" + JSON.stringify(text) + "\n");
-		} else {
-			message = await input("\nGPT: " + text + "\nYou: ");
-		}
-
-		print();
+		this.actionFor('answer_user').execute()
 	}
 
 	clickLink() {
+		this.actionFor('click_link').execute()
 	}
 }
