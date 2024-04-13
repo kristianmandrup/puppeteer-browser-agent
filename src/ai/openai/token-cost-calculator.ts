@@ -1,4 +1,20 @@
+import type { DebugOpts } from "../../types";
+
 export class OpenAITokenCostCalculator {
+	tokenUsage = {
+		promptTokens: 0,
+		completionTokens: 0,
+		totalTokens: 0,
+	};
+
+	model?: string;
+	debug = false;
+
+	constructor(model: string, opts: DebugOpts = {}) {
+		this.model = model;
+		this.debug = Boolean(opts.debug);
+	}
+
 	getTokenPrice(model: string, direction: string) {
 		let tokenPriceInput = 0.0;
 		let tokenPriceOutput = 0.0;
@@ -23,9 +39,13 @@ export class OpenAITokenCostCalculator {
 		return tokenPriceOutput;
 	}
 
-	tokenCost(promptTokens, completionTokens, model) {
-		let promptPrice = this.getTokenPrice(model, "input");
-		let completionPrice = this.getTokenPrice(model, "output");
+	tokenCost(promptTokens: number, completionTokens: number) {
+		const { model } = this;
+		if (!model) {
+			throw new Error("Invalid or missing model");
+		}
+		const promptPrice = this.getTokenPrice(model, "input");
+		const completionPrice = this.getTokenPrice(model, "output");
 
 		return promptTokens * promptPrice + completionTokens * completionPrice;
 	}
@@ -35,18 +55,16 @@ export class OpenAITokenCostCalculator {
 	}
 
 	printCurrentCost() {
-		let cost = this.tokenCost(
+		const { tokenUsage, model } = this;
+		const cost = this.tokenCost(
 			tokenUsage.promptTokens,
 			tokenUsage.completionTokens,
-			model,
 		);
 
 		this.print(
-			"Current cost: " +
-				this.round(cost, 2) +
-				" USD (" +
-				tokenUsage.totalTokens +
-				" tokens)",
+			`Current cost: ${this.round(cost, 2)} USD (${
+				tokenUsage.totalTokens
+			} tokens)`,
 		);
 	}
 
