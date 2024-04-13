@@ -1,4 +1,16 @@
-# TypeScript Library Starter
+# Puppeteer Browser Agent
+
+## Status
+
+WIP - based on work by unconvcode/GPT-puppeteer
+
+## Installation
+
+```
+npm i puppeteer-browser-agent
+```
+
+## Contribute
 
 ![NPM](https://img.shields.io/npm/l/@gjuchault/typescript-library-starter)
 ![NPM](https://img.shields.io/npm/v/@gjuchault/typescript-library-starter)
