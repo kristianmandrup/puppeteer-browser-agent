@@ -28,5 +28,6 @@
 	},
 	"[jsonl]": {
 		"editor.defaultFormatter": "biomejs.biome"
-	}
+	},
+	"exportall.config.relExclusion": ["/src/__tests__"]
 }
