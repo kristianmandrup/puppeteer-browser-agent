@@ -1,28 +1,37 @@
+import fs from "node:fs";
+import type { DebugOpts } from "../../types";
 export class OpenAIMessageRedacter {
-	redact(messages) {
-		let redacted_messages = [];
-		let current_url = messages[messages.length - 1].url;
+	currentUrl = "";
+	debug: boolean;
 
-		messages.forEach((message) => {
-			let msg = JSON.parse(JSON.stringify(message));
+	constructor(opts: DebugOpts) {
+		this.debug = Boolean(opts.debug);
+	}
 
-			if (msg.url != current_url) {
-				//msg.content = msg.redacted ?? msg.content ?? "";
-			}
+	redactMessages(messages: any[]) {
+		this.currentUrl = messages[messages.length - 1].url;
 
-			delete msg.redacted;
-			delete msg.url;
+		const redactMessage = this.redactMessage.bind(this);
+		return messages.map(redactMessage);
+	}
 
-			redacted_messages.push(msg);
-		});
-
-		if (debug) {
-			fs.writeFileSync(
-				"context_redacted" + redacted_messages.length + ".json",
-				JSON.stringify(redacted_messages, null, 2),
-			);
+	redactMessage(message: any) {
+		const msg = JSON.parse(JSON.stringify(message));
+		if (msg.url !== this.currentUrl) {
+			// msg.content = msg.redacted ?? msg.content ?? "";
 		}
+		msg.redacted = undefined;
+		msg.url = undefined;
+		return msg;
+	}
 
-		return redacted_messages;
+	logRedacted(redactedMessages: any[]) {
+		if (!this.debug) {
+			return;
+		}
+		fs.writeFileSync(
+			`context_redacted${redactedMessages.length}.json`,
+			JSON.stringify(redactedMessages, null, 2),
+		);
 	}
 }

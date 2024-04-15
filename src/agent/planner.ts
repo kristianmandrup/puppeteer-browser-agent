@@ -3,6 +3,11 @@ import fs from "node:fs";
 import { AgentDriver } from "./driver";
 import type { DebugOpts } from "../types";
 
+export type ActionConfig = {
+	action: string;
+	arguments: string[];
+};
+
 const defaultSystemContext = [
 	{
 		role: "system",
@@ -34,6 +39,9 @@ export class AgentPlanner {
 	driver?: AgentDriver;
 	opts: DebugOpts;
 	debug: boolean;
+	msg: any = {};
+	acceptPlan?: string;
+	autopilot = false;
 
 	constructor(context: unknown[], opts: DebugOpts = {}) {
 		this.context = context || this.createInitialContext();
@@ -100,31 +108,70 @@ export class AgentPlanner {
 	}
 
 	async getAgentResponse() {
-		return await this.driver?.sendContextualMessage(this.msg, this.context, {
-			name: "make_plan",
+		// send chat message
+		// async function send_chat_message(
+		// 	message,
+		// 	context,
+		// 	function_call = "auto",
+		// 	functions = null
+		//   ) {
+		// 	let messages = [...context];
+		const actionConfig: ActionConfig = {
+			action: "make_plan",
 			arguments: ["plan"],
-		});
+		};
+
+		// See: sendMessageToController
+		return await this.sendMessageToController(
+			this.msg,
+			this.context,
+			actionConfig,
+		);
+	}
+
+	sendMessageToController(msg: any, context: any, actionConfig: any) {
+		//
+	}
+
+	// TODO
+	async getResponse() {
+		return {};
 	}
 
 	async runPlan() {
+		// TODO
 		this.response = await this.getResponse();
 
 		this.addMessageToContext(this.msg);
 		this.addResponseToContext(this.response);
 		this.logContext();
 
-		let args = JSON.parse(this.response.function_call.arguments);
+		const args = JSON.parse(this.response.function_call.arguments);
+		this.handleArgs(args);
+		await this.handleAcceptPlan;
+	}
 
-		print("\n## PLAN ##");
-		print(args.plan);
-		print("## PLAN ##\n");
-
-		if (autopilot) {
-			accept_plan = "y";
-		} else {
-			accept_plan = await input(
-				"Do you want to continue with this plan? (y/n): ",
-			);
+	async handleAcceptPlan() {
+		if (this.autopilot) {
+			this.acceptPlan = "y";
+			return;
 		}
+		this.acceptPlan = await this.getInput(
+			"Do you want to continue with this plan? (y/n): ",
+		);
+	}
+
+	getInput(prompt: string) {
+		return "ok";
+	}
+
+	handleArgs(args: any) {
+		this.print("\n## PLAN ##");
+		this.print(args.plan);
+		this.print("## PLAN ##\n");
+	}
+
+	print(data: any) {
+		console.info(data);
 	}
 }
