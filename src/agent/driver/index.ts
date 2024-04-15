@@ -51,12 +51,15 @@ export class AgentDriver {
 		delete this.actions[label];
 	}
 
-	async run(context: string[], response: HTTPResponse) {
-		this.context = context;
+	async start() {
 		this.page = await this.browser.start();
 		if (!this.page) {
 			throw new Error("No page");
 		}
+	}
+
+	async run(context: string[], response: HTTPResponse) {
+		this.context = context;
 		this.initialize();
 		await this.doStep(context, response, [], null);
 

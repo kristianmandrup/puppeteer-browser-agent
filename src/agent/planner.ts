@@ -1,6 +1,7 @@
 import type { HTTPResponse } from "puppeteer";
 import fs from "node:fs";
 import { AgentDriver } from "./driver";
+import type { DebugOpts } from "../types";
 
 const defaultSystemContext = [
 	{
@@ -25,14 +26,19 @@ export type AssignedMsg = {
 export class AgentPlanner {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	context: any[];
+	// TODO: agent response?
+	response?: any;
 	assignedMsg?: AssignedMsg;
 	promptMessage?: string;
 	promptText?: string;
 	driver?: AgentDriver;
+	opts: DebugOpts;
+	debug: boolean;
 
-	constructor(context: unknown[], driver: AgentDriver) {
+	constructor(context: unknown[], opts: DebugOpts = {}) {
 		this.context = context || this.createInitialContext();
-		this.driver = driver;
+		this.opts = opts;
+		this.debug = Boolean(opts.debug);
 	}
 
 	createInitialContext() {
@@ -55,10 +61,19 @@ export class AgentPlanner {
 			await this.runPlan();
 		}
 
-		const page = await this.driver.startBrowser();
-		await this.driver.dostep(page, context, response, [], null);
+		await this.createDriver();
+		await this.startDriver();
+		await this.driver?.run(this.context, this.response);
 
 		this.browser?.close();
+	}
+
+	createDriver() {
+		this.driver = new AgentDriver(this.opts);
+	}
+
+	async startDriver() {
+		await this.driver?.start();
 	}
 
 	get browser() {
@@ -66,10 +81,10 @@ export class AgentPlanner {
 	}
 
 	logContext() {
-		if (!debug) {
+		if (!this.debug) {
 			return;
 		}
-		fs.writeFileSync("context.json", JSON.stringify(context, null, 2));
+		fs.writeFileSync("context.json", JSON.stringify(this.context, null, 2));
 	}
 
 	addToContext(item: unknown) {
@@ -84,17 +99,21 @@ export class AgentPlanner {
 		this.addToContext(response);
 	}
 
-	async runPlan() {
-		response = await this.driver.sendContextualMessage(msg, context, {
+	async getAgentResponse() {
+		return await this.driver?.sendContextualMessage(this.msg, this.context, {
 			name: "make_plan",
 			arguments: ["plan"],
 		});
+	}
 
-		this.addMessageToContext(msg);
-		this.addResponseToContext(response);
+	async runPlan() {
+		this.response = await this.getResponse();
+
+		this.addMessageToContext(this.msg);
+		this.addResponseToContext(this.response);
 		this.logContext();
 
-		let args = JSON.parse(response.function_call.arguments);
+		let args = JSON.parse(this.response.function_call.arguments);
 
 		print("\n## PLAN ##");
 		print(args.plan);
