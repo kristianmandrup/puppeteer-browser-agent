@@ -8,7 +8,11 @@
 			"all": true,
 			"nursery": {
 				"noNodejsModules": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "warn"
 			}
+			
 		}
 	}
 }
