@@ -13,7 +13,7 @@ export type StructuredMsg = {
 	url: string;
 };
 
-export type FnArgs = Record<string, string>;
+export type FnArgs = Record<string, any>;
 export type DriverOpts = DebugOpts;
 
 export class AgentDriver {
