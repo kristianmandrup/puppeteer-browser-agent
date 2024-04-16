@@ -1,4 +1,6 @@
-import { BaseDriverAction } from "./base-action";
+import { BaseDriverAction, IDriverAction } from "./base-action";
+
+export interface IGotoUrlAction extends IDriverAction {}
 
 export class GotoUrlAction extends BaseDriverAction {
 	async execute() {

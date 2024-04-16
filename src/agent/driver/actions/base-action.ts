@@ -4,12 +4,13 @@ import type { DebugOpts } from "../../../types";
 export interface IDriverAction {
 	execute(): Promise<void>;
 }
-
 export abstract class BaseDriverAction implements IDriverAction {
 	driver: AgentDriver;
 	fnArgs: FnArgs = {};
 	context: Context = [];
 	debug = false;
+	taskPrefix?: string;
+	message?: string;
 
 	constructor(
 		driver: AgentDriver,
@@ -24,12 +25,16 @@ export abstract class BaseDriverAction implements IDriverAction {
 		this.debug = Boolean(opts.debug);
 	}
 
+	setMessage(message: string) {
+		this.message = message;
+	}
+
 	get page() {
 		return this.driver.page;
 	}
 
 	// biome-ignore lint/suspicious/useAwait: <explanation>
-	async execute() {
+	public async execute() {
 		this.log("Action: To be implemented");
 	}
 
