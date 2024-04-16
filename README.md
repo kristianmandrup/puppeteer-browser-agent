@@ -10,6 +10,17 @@ WIP - based on work by unconvcode/GPT-puppeteer
 npm i puppeteer-browser-agent
 ```
 
+## Design
+
+The implementation is in Typescript and is best used in this environment.
+
+First write an implementation of `IAgentPlanner` or extend the built-in `AgentPlanner` class.
+This class needs to have at least an async `runPlan` method which runs the overall agent plan.
+
+The `AgentPlanner` can use the `AgentDriver` to implement an agent driving the browser via puppeteer.
+
+The `AgentDriver` must implement `IAgentDriver` by supplying the methods `start` and `launch`.
+
 ## Contribute
 
 ![NPM](https://img.shields.io/npm/l/@gjuchault/typescript-library-starter)

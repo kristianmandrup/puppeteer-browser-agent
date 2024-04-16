@@ -22,7 +22,13 @@ type BrowserOpts = {
 	viewport?: ViewportOpts;
 };
 
-export class AgentBrowser {
+export interface IAgentBrowser {
+	launch(): Promise<void>;
+	start(): Promise<Page>;
+	close(): void;
+}
+
+export class AgentBrowser implements IAgentBrowser {
 	page?: Page;
 	launched = false;
 	loaded = false;
@@ -40,7 +46,7 @@ export class AgentBrowser {
 		this.view = opts.viewport || {};
 	}
 
-	async launch() {
+	public async launch() {
 		if (this.launched) {
 			return;
 		}
@@ -55,36 +61,7 @@ export class AgentBrowser {
 		this.launched = true;
 	}
 
-	protected get defaultViewport() {
-		return {
-			width: 1200,
-			height: 1200,
-			deviceScaleFactor: 1,
-		};
-	}
-
-	get viewport(): Viewport {
-		return {
-			...this.defaultViewport,
-			...this.view,
-		};
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	print(...msgs: any[]) {
-		// biome-ignore lint/style/useBlockStatements: <explanation>
-		if (!this.debug) return;
-		console.info(...msgs);
-	}
-
-	close() {
-		if (!this.browser) {
-			return;
-		}
-		this.browser.close();
-	}
-
-	async start() {
+	public async start() {
 		await this.launch();
 		if (!this.page) {
 			throw new Error("Browser must be launched before it can be started");
@@ -124,15 +101,43 @@ export class AgentBrowser {
 				}, 2000);
 			}
 		});
-
 		return page;
 	}
 
-	isBlock(_request: HTTPRequest) {
+	public close() {
+		if (!this.browser) {
+			return;
+		}
+		this.browser.close();
+	}
+
+	protected get defaultViewport() {
+		return {
+			width: 1200,
+			height: 1200,
+			deviceScaleFactor: 1,
+		};
+	}
+
+	get viewport(): Viewport {
+		return {
+			...this.defaultViewport,
+			...this.view,
+		};
+	}
+
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	protected print(...msgs: any[]) {
+		// biome-ignore lint/style/useBlockStatements: <explanation>
+		if (!this.debug) return;
+		console.info(...msgs);
+	}
+
+	protected isBlock(_request: HTTPRequest) {
 		return false;
 	}
 
-	onRequestBlock(request: HTTPRequest) {
+	protected onRequestBlock(request: HTTPRequest) {
 		if (!this.isBlock(request)) {
 			return;
 		}
@@ -147,15 +152,15 @@ export class AgentBrowser {
 		}
 	}
 
-	incRequestCount() {
+	protected incRequestCount() {
 		this.requests++;
 	}
 
-	startDownload() {
+	protected startDownload() {
 		this.downloadStarted = true;
 	}
 
-	isLargeResponse(response: HTTPResponse): boolean {
+	protected isLargeResponse(response: HTTPResponse): boolean {
 		const headers = response.headers();
 		return (
 			this.hasAttachment(headers) ||
@@ -164,27 +169,27 @@ export class AgentBrowser {
 		);
 	}
 
-	isBinary(headers: PageHeaders): boolean {
+	protected isBinary(headers: PageHeaders): boolean {
 		return headers["content-type"] === "application/octet-stream";
 	}
 
-	hasAttachment(headers: PageHeaders): boolean {
+	protected hasAttachment(headers: PageHeaders): boolean {
 		return Boolean(headers["content-disposition"]?.includes("attachment"));
 	}
 
-	hasLargeContent(headers: PageHeaders): boolean {
+	protected hasLargeContent(headers: PageHeaders): boolean {
 		return Number(headers["content-length"]) > 1024 * this.maxMbs;
 	}
 
-	get maxMbs() {
+	protected get maxMbs() {
 		return 200;
 	}
 
-	incResponseCount() {
+	protected incResponseCount() {
 		this.responses++;
 	}
 
-	async sleep(ms: number, debug = true) {
+	protected async sleep(ms: number, debug = true) {
 		if (this.debug && debug) {
 			this.print(`Sleeping ${ms} ms`);
 		}

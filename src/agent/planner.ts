@@ -2,6 +2,10 @@ import type { HTTPResponse } from "puppeteer";
 import fs from "node:fs";
 import { AgentDriver } from "./driver";
 import type { DebugOpts } from "../types";
+import {
+	type IMessageSender,
+	MessageSender,
+} from "./driver/message/message-sender";
 
 export type ActionConfig = {
 	action: string;
@@ -28,7 +32,15 @@ export type AssignedMsg = {
 	content: string;
 };
 
-export class AgentPlanner {
+export type PlannerOpts = DebugOpts & {
+	model?: string;
+};
+
+export interface IAgentPlanner {
+	runPlan(): Promise<void>;
+}
+
+export class AgentPlanner implements IAgentPlanner {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	context: any[];
 	// TODO: agent response?
@@ -37,28 +49,50 @@ export class AgentPlanner {
 	promptMessage?: string;
 	promptText?: string;
 	driver?: AgentDriver;
-	opts: DebugOpts;
 	debug: boolean;
-	msg: any = {};
+	msg = {};
 	acceptPlan?: string;
 	autopilot = false;
+	messageSender?: IMessageSender;
+	model: string;
+	opts: PlannerOpts;
 
-	constructor(context: unknown[], opts: DebugOpts = {}) {
+	constructor(context: unknown[], opts: PlannerOpts = {}) {
 		this.context = context || this.createInitialContext();
 		this.opts = opts;
 		this.debug = Boolean(opts.debug);
+		this.opts = opts;
+		this.model = opts.model || "gpt-3.5";
+		this.createMessageSender();
 	}
 
-	createInitialContext() {
+	public async runPlan() {
+		// TODO
+		this.response = await this.getResponse();
+
+		this.addMessageToContext(this.msg);
+		this.addResponseToContext(this.response);
+		this.logContext();
+
+		const args = JSON.parse(this.response.function_call.arguments);
+		this.handleArgs(args);
+		await this.handleAcceptPlan;
+	}
+
+	protected createMessageSender() {
+		this.messageSender = new MessageSender(this.model, this.opts);
+	}
+
+	protected createInitialContext() {
 		return defaultSystemContext;
 	}
 
 	// TODO: fix
-	isPlanAccepted(): boolean {
+	protected isPlanAccepted(): boolean {
 		return true;
 	}
 
-	async start() {
+	public async start() {
 		this.promptMessage = `Task: ${this.promptText}.`;
 		this.assignedMsg = {
 			role: "user",
@@ -76,38 +110,38 @@ export class AgentPlanner {
 		this.browser?.close();
 	}
 
-	createDriver() {
+	protected createDriver() {
 		this.driver = new AgentDriver(this.opts);
 	}
 
-	async startDriver() {
+	protected async startDriver() {
 		await this.driver?.start();
 	}
 
-	get browser() {
+	protected get browser() {
 		return this.driver?.browser;
 	}
 
-	logContext() {
+	protected logContext() {
 		if (!this.debug) {
 			return;
 		}
 		fs.writeFileSync("context.json", JSON.stringify(this.context, null, 2));
 	}
 
-	addToContext(item: unknown) {
+	protected addToContext(item: unknown) {
 		this.context.push(item);
 	}
 
-	addMessageToContext(msg: unknown) {
+	protected addMessageToContext(msg: unknown) {
 		this.addToContext(msg);
 	}
 
-	addResponseToContext(response: HTTPResponse) {
+	protected addResponseToContext(response: HTTPResponse) {
 		this.addToContext(response);
 	}
 
-	async getAgentResponse() {
+	protected async getAgentResponse() {
 		// send chat message
 		// async function send_chat_message(
 		// 	message,
@@ -129,29 +163,16 @@ export class AgentPlanner {
 		);
 	}
 
-	sendMessageToController(msg: any, context: any, actionConfig: any) {
-		//
+	protected sendMessageToController(msg: any, context: any, actionConfig: any) {
+		this.messageSender?.sendMessageToController(msg, context, actionConfig);
 	}
 
 	// TODO
-	async getResponse() {
+	protected async getResponse() {
 		return {};
 	}
 
-	async runPlan() {
-		// TODO
-		this.response = await this.getResponse();
-
-		this.addMessageToContext(this.msg);
-		this.addResponseToContext(this.response);
-		this.logContext();
-
-		const args = JSON.parse(this.response.function_call.arguments);
-		this.handleArgs(args);
-		await this.handleAcceptPlan;
-	}
-
-	async handleAcceptPlan() {
+	protected async handleAcceptPlan() {
 		if (this.autopilot) {
 			this.acceptPlan = "y";
 			return;
@@ -161,17 +182,17 @@ export class AgentPlanner {
 		);
 	}
 
-	getInput(prompt: string) {
+	protected getInput(prompt: string) {
 		return "ok";
 	}
 
-	handleArgs(args: any) {
+	protected handleArgs(args: any) {
 		this.print("\n## PLAN ##");
 		this.print(args.plan);
 		this.print("## PLAN ##\n");
 	}
 
-	print(data: any) {
+	protected print(data: any) {
 		console.info(data);
 	}
 }
