@@ -1,11 +1,11 @@
-import type { AgentDriver, Context, FnArgs } from "../driver";
+import type { Context, FnArgs, IAgentDriver } from "../driver";
 import type { DebugOpts } from "../../../types";
 
 export interface IDriverAction {
 	execute(): Promise<void>;
 }
 export abstract class BaseDriverAction implements IDriverAction {
-	driver: AgentDriver;
+	driver: IAgentDriver;
 	fnArgs: FnArgs = {};
 	context: Context = [];
 	debug = false;
@@ -13,7 +13,7 @@ export abstract class BaseDriverAction implements IDriverAction {
 	message?: string;
 
 	constructor(
-		driver: AgentDriver,
+		driver: IAgentDriver,
 		fnArgs: FnArgs,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		context: any[],

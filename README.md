@@ -19,7 +19,67 @@ This class needs to have at least an async `runPlan` method which runs the overa
 
 The `AgentPlanner` can use the `AgentDriver` to implement an agent driving the browser via puppeteer.
 
-The `AgentDriver` must implement `IAgentDriver` by supplying the methods `start` and `launch`.
+The `AgentDriver` must implement `IAgentDriver` by supplying the async methods `start` and `run`.
+
+The `start` method should start the browser and do any initialization necessary.
+The `run` method should implement the core logic which takes actions and performs them via the browser.
+
+The driver can register actions via the method `registerAction(label: string, action: IDriverAction)` and remove actions via `removeAction(label: string)`.
+
+The library comes with a set of basic actions that can be used as starting point, to be extended or used as you find suitable. Each of these actions extends `DriverAction` and implements the `IDriverAction` interface which simply requires an async `execute` method.
+
+These actions are:
+
+- `GotoUrlAction` implementing `IGotoUrlAction` to goto a given URL page
+- `ClickLinkAction` implementing `IClickLinkAction` to click page links
+- `ReadFileAction` implementing `IReadFileAction` to read a file for instructions
+- `ReceiveInputAction` implementing `IReceiveInputAction` for user/agent input to instruct driver for decisions and actions
+- `SubmitFormAction` implementing `ISubmitFormAction` to enter data into form fields and submit forms
+
+These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
+
+A typical custom implementation would look like the following snippet, where factory methods in each custom class can be used to wire the implementation as needed.
+
+```ts
+export class MyAgentPlanner extends AgentPlanner {
+  // override as necessary
+
+  protected createDriver() {
+    this.driver = new MyAgentDriver(this.opts);
+  }
+}
+
+export class MyAgentDriver extends AgentDriver {
+  // override as necessary
+
+  protected createElementSelector() {
+    return new MyElementSelector(this.page);
+  }
+
+  protected createAgentBrowser() {
+    return new MyAgentBrowser();
+  }
+}
+
+export class MyAgentBrowser {}
+
+export class MyElementSelector {
+  // override as necessary
+  createPageNavigator() {
+    return new MyPageNavigator(this.page);
+  }
+}
+
+export class MyPageNavigator {
+  // override as necessary
+
+  createElementEvaluator(element: Element, id: number, selector: string) {
+    return new MyElementEvaluator(element, id, selector);
+  }
+}
+
+// And so on...
+```
 
 ## Contribute
 

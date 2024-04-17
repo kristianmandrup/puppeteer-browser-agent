@@ -182,7 +182,7 @@ export class AgentPlanner implements IAgentPlanner {
 		);
 	}
 
-	protected getInput(prompt: string) {
+	protected getInput(_prompt: string) {
 		return "ok";
 	}
 

@@ -1,7 +1,6 @@
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 
 export interface IReceiveInputAction extends IDriverAction {
-	execute(): Promise<void>;
 	receiveInput(msg: string): Promise<string>;
 }
 

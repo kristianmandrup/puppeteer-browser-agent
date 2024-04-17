@@ -1,6 +1,7 @@
 import { TimeoutError, type Page } from "puppeteer";
-import type { AgentDriver, Context, FnArgs } from "../driver";
+import type { Context, FnArgs, IAgentDriver } from "../driver";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
+import { DocumentNavigator, type IDocumentNavigator } from "../document";
 
 export interface IClickLinkAction extends IDriverAction {}
 
@@ -20,25 +21,31 @@ export class ClickLinkAction
 	requestCount = 0;
 	responseCount = 0;
 	downloadStarted = false;
+	navigator: IDocumentNavigator;
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	constructor(
-		driver: AgentDriver,
+		driver: IAgentDriver,
 		fnArgs: FnArgs,
 		context: Context,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		linksAndInputs: any[],
 	) {
 		super(driver, fnArgs, context);
 		this.linkId = fnArgs.pgpt_id;
 		this.linkText = fnArgs.text;
 		this.linksAndInputs = linksAndInputs;
+		this.navigator = this.createNavigator();
 	}
 
-	get elementSelector() {
+	protected createNavigator() {
+		return new DocumentNavigator();
+	}
+
+	protected get elementSelector() {
 		return this.driver.elementSelector;
 	}
 
-	missingLinkId() {
+	protected missingLinkId() {
 		if (this.linkId) {
 			return;
 		}
@@ -120,8 +127,8 @@ export class ClickLinkAction
 		this.page?.click(this.linkElementSelector);
 	}
 
-	waitForNavigation() {
-		return;
+	async waitForNavigation() {
+		await this.navigator.waitForNavigation;
 	}
 
 	onLinkNavigation() {

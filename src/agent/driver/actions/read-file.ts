@@ -11,6 +11,7 @@ export class ReadFileAction
 {
 	filename?: string;
 	contextLengthLimit = 4000;
+	skipFile = false;
 
 	onStartTask() {
 		this.log(`${this.taskPrefix}Reading file ${this.filename}`);
@@ -21,34 +22,48 @@ export class ReadFileAction
 			throw new Error("Read file: Missing file name");
 		}
 		if (!fs.existsSync(this.filename)) {
-			return false;
+			throw new Error(`File to read ${this.filename} does not exist`);
 		}
 
-		const fileData = await fs.promises.readFile(this.filename, {
-			encoding: "utf-8",
-		});
+		const fileData = await this.getFileData();
 		const content = this.contentFromFileData(fileData);
 		this.setMessage(content);
 		return true;
+	}
+
+	async getFileData() {
+		if (!this.filename) {
+			throw new Error("Read file: Missing file name");
+		}
+		return await fs.promises.readFile(this.filename, {
+			encoding: "utf-8",
+		});
 	}
 
 	contentFromFileData(fileData: string) {
 		return fileData.substring(0, this.contextLengthLimit);
 	}
 
-	handleMissingFile() {
-		this.sendMessage("ERROR: That file does not exist");
+	handleReadError(_error: any) {
+		this.sendMessage(`ERROR: The file ${this.filename} does not exist`);
 		return;
 	}
 
 	async attemptToReadFile() {
 		if (!(await this.shouldReadFile())) {
-			return;
+			this.skipFile = true;
 		}
-		return this.readFile() || this.handleMissingFile();
+		try {
+			this.readFile();
+		} catch (error) {
+			this.handleReadError(error);
+		}
 	}
 
 	handleCannotReadFile() {
+		if (!this.skipFile) {
+			return;
+		}
 		this.sendMessage(
 			`ERROR: You are not allowed to read this file: ${this.filename}`,
 		);
@@ -56,7 +71,8 @@ export class ReadFileAction
 
 	public async execute() {
 		this.filename = this.fnArgs.filename;
-		(await this.attemptToReadFile()) || this.handleCannotReadFile();
+		await this.attemptToReadFile();
+		this.handleCannotReadFile();
 	}
 
 	async getInput(msg: string) {

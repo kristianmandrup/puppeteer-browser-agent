@@ -6,7 +6,11 @@ type SelectorOpts = {
 	debug?: boolean;
 };
 
-export class ElementSelector {
+export interface IElementSelector {
+	getElements(page: Page, selector?: string): Promise<ElementHandle<Element>[]>;
+}
+
+export class ElementSelector implements IElementSelector {
 	page: Page;
 	navigator: PageNavigator;
 	skipped: ElementHandle<Element>[] = [];
@@ -15,8 +19,12 @@ export class ElementSelector {
 
 	constructor(page: Page, opts: SelectorOpts = {}) {
 		this.page = page;
-		this.navigator = new PageNavigator(this.page);
+		this.navigator = this.createPageNavigator();
 		this.debug = opts.debug;
+	}
+
+	createPageNavigator() {
+		return new PageNavigator(this.page);
 	}
 
 	get elementSelector() {

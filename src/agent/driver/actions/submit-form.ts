@@ -1,12 +1,34 @@
 import type { ElementHandle } from "puppeteer";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
+import { DocumentNavigator, type IDocumentNavigator } from "../document";
+import type { FnArgs, IAgentDriver } from "../driver";
+import type { DebugOpts } from "../../../types";
 
-export interface IGotoUrlAction extends IDriverAction {}
+export interface ISumbitFormAction extends IDriverAction {}
 
-export class SubmitFormAction extends BaseDriverAction {
+export class SubmitFormAction
+	extends BaseDriverAction
+	implements ISumbitFormAction
+{
 	formData: any;
 	prevInput: any;
 	linksAndInputs: any;
+	navigator: IDocumentNavigator;
+
+	constructor(
+		driver: IAgentDriver,
+		fnArgs: FnArgs,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		context: any[],
+		opts: DebugOpts = {},
+	) {
+		super(driver, fnArgs, context, opts);
+		this.navigator = this.createNavigator();
+	}
+
+	protected createNavigator() {
+		return new DocumentNavigator();
+	}
 
 	async selectElement(elementSelector: string) {
 		return await this.page?.$(elementSelector);
@@ -92,7 +114,9 @@ export class SubmitFormAction extends BaseDriverAction {
 	}
 
 	// TODO
-	protected async waitForNavigation() {}
+	protected async waitForNavigation() {
+		await this.navigator.waitForNavigation;
+	}
 
 	protected async onSubmit() {
 		if (!this.fnArgs.submit) {

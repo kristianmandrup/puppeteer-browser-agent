@@ -8,13 +8,16 @@ export class PageNavigator {
 		this.page = page;
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	// string, ...args: Params
 	// biome-ignore lint/suspicious/useAwait: <explanation>
 	onEvaluate = async (element: Element, id: number, selector: string) => {
-		const evaluator = new ElementEvaluator(element, id, selector);
+		const evaluator = this.createElementEvaluator(element, id, selector);
 		return evaluator.evaluate();
 	};
+
+	createElementEvaluator(element: Element, id: number, selector: string) {
+		return new ElementEvaluator(element, id, selector);
+	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	async nextInteractiveElement(element: any, id: number, selector = "*") {

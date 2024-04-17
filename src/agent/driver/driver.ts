@@ -2,7 +2,10 @@ import type { HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser } from "../browser.js";
 import fs from "node:fs";
 import type { DebugOpts } from "../../types.js";
-import { ElementSelector } from "../../elements/selector.js";
+import {
+	ElementSelector,
+	type IElementSelector,
+} from "../../elements/selector.js";
 import type { IDriverAction } from "./actions/base-action.js";
 import { PageScraper } from "./document/page-scraper.js";
 import { MessageBuilder } from "./message/message-builder.js";
@@ -20,7 +23,7 @@ export interface IAgentDriver {
 	registerAction(label: string, action: IDriverAction): void;
 	removeAction(label: string): void;
 	start(): Promise<void>;
-	initialize(): void;
+	closeBrowser(): void;
 	run(context: string[], response: HTTPResponse): Promise<void>;
 	doStep(
 		context: string[],
@@ -33,6 +36,9 @@ export interface IAgentDriver {
 	): Promise<void>;
 	sendMessage(msg: string): void;
 	getInput(msg: string): Promise<string>;
+	page?: Page;
+	elementSelector: IElementSelector;
+	autopilot: boolean;
 }
 
 export class AgentDriver implements IAgentDriver {
@@ -52,14 +58,29 @@ export class AgentDriver implements IAgentDriver {
 	noContent = false;
 
 	context?: string[] = [];
-	elementSelector?: ElementSelector;
+	elementSelector: IElementSelector;
 	messageBuilder: MessageBuilder = new MessageBuilder();
 
 	actions: Record<string, IDriverAction> = {};
 
 	constructor(opts: DriverOpts = {}) {
 		this.debug = Boolean(opts.debug);
-		this.browser = new AgentBrowser();
+		this.browser = this.createAgentBrowser();
+		if (!this.page) {
+			throw new Error("No page");
+		}
+		this.elementSelector = this.createElementSelector();
+	}
+
+	protected createElementSelector() {
+		if (!this.page) {
+			throw new Error("No page");
+		}
+		return new ElementSelector(this.page);
+	}
+
+	protected createAgentBrowser() {
+		return new AgentBrowser();
 	}
 
 	public registerAction(label: string, action: IDriverAction) {
@@ -71,25 +92,26 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	public async start() {
-		this.page = await this.browser.start();
-		if (!this.page) {
-			throw new Error("No page");
-		}
+		this.initialize();
+		this.page = await this.openBrowserPage();
 	}
 
 	public async run(context: string[], response: HTTPResponse) {
 		this.context = context;
-		this.initialize();
 		await this.doStep(context, response, [], null);
-
 		this.browser.close();
 	}
 
-	public initialize() {
-		if (!this.page) {
-			throw new Error("No page");
-		}
-		this.elementSelector = new ElementSelector(this.page);
+	public closeBrowser() {
+		this.browser.close();
+	}
+
+	protected initialize() {
+		this.log("initializing...");
+	}
+
+	protected async openBrowserPage() {
+		return await this.browser.start();
 	}
 
 	protected parseArgs() {
@@ -223,6 +245,13 @@ export class AgentDriver implements IAgentDriver {
 		this.logInfo();
 
 		await this.doStep(context, nextStep, linksAndInputs, element);
+	}
+
+	protected log(msg: any) {
+		if (!this.debug) {
+			return;
+		}
+		console.info(msg);
 	}
 
 	logInfo() {

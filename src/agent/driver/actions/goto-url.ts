@@ -1,7 +1,8 @@
 import type { PuppeteerLifeCycleEvent } from "puppeteer";
-import { BaseDriverAction } from "./base-action";
+import { BaseDriverAction, type IDriverAction } from "./base-action";
 
-export class GotoUrlAction extends BaseDriverAction {
+export interface IGotoUrlAction extends IDriverAction {}
+export class GotoUrlAction extends BaseDriverAction implements IGotoUrlAction {
 	waitUntil: PuppeteerLifeCycleEvent = "load";
 	linksAndInputs: any[] = [];
 
