@@ -44,9 +44,8 @@ export class PageNavigator implements IPageNavigator {
 		}
 	}
 
-	// TODO: inherit
-	log(_msg: string) {
-		// TODO
+	log(msg: string) {
+		this.driver.log(msg);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>

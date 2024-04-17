@@ -8,8 +8,8 @@ import {
 } from "./driver/message/message-sender";
 
 export type ActionConfig = {
-	action: string;
-	arguments: string[];
+	name: string;
+	arguments?: string[];
 };
 
 const defaultSystemContext = [
@@ -43,8 +43,8 @@ export interface IAgentPlanner {
 export class AgentPlanner implements IAgentPlanner {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	context: any[];
-	// TODO: agent response?
-	response?: any;
+	// agent response?
+	aiAgentResponse?: any;
 	assignedMsg?: AssignedMsg;
 	promptMessage?: string;
 	promptText?: string;
@@ -63,8 +63,13 @@ export class AgentPlanner implements IAgentPlanner {
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
 		this.model = opts.model || "gpt-3.5";
-		this.messageSender = this.createMessageSender();
 		this.driver = this.createDriver();
+		this.messageSender =
+			this.driver.messageSender || this.createMessageSender();
+	}
+
+	get definitions() {
+		return this.driver.definitions;
 	}
 
 	setDefinitions(definitions: any[]) {
@@ -72,14 +77,14 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	public async runPlan() {
-		// TODO
-		this.response = await this.getResponse();
+		// from ai agent
+		this.aiAgentResponse = await this.getAgentResponse();
 
 		this.addMessageToContext(this.msg);
-		this.addResponseToContext(this.response);
+		this.addResponseToContext(this.aiAgentResponse);
 		this.logContext();
 
-		const args = JSON.parse(this.response.function_call.arguments);
+		const args = JSON.parse(this.aiAgentResponse.function_call.arguments);
 		this.handleArgs(args);
 		await this.handleAcceptPlan;
 	}
@@ -92,9 +97,8 @@ export class AgentPlanner implements IAgentPlanner {
 		return defaultSystemContext;
 	}
 
-	// TODO: fix
 	protected isPlanAccepted(): boolean {
-		return true;
+		return this.acceptPlan === "y";
 	}
 
 	public async start() {
@@ -109,7 +113,7 @@ export class AgentPlanner implements IAgentPlanner {
 		}
 
 		await this.startDriver();
-		await this.driver?.run(this.context, this.response);
+		await this.driver?.run(this.context, this.aiAgentResponse);
 
 		this.browser?.close();
 	}
@@ -146,16 +150,8 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected async getAgentResponse() {
-		// send chat message
-		// async function send_chat_message(
-		// 	message,
-		// 	context,
-		// 	function_call = "auto",
-		// 	functions = null
-		//   ) {
-		// 	let messages = [...context];
 		const actionConfig: ActionConfig = {
-			action: "make_plan",
+			name: "make_plan",
 			arguments: ["plan"],
 		};
 
@@ -171,11 +167,6 @@ export class AgentPlanner implements IAgentPlanner {
 		this.messageSender?.sendMessageToController(msg, context, actionConfig);
 	}
 
-	// TODO
-	protected async getResponse() {
-		return {};
-	}
-
 	protected async handleAcceptPlan() {
 		if (this.autopilot) {
 			this.acceptPlan = "y";
@@ -186,8 +177,8 @@ export class AgentPlanner implements IAgentPlanner {
 		);
 	}
 
-	protected getInput(_prompt: string) {
-		return "ok";
+	protected async getInput(prompt: string) {
+		return await this.driver.getInput(prompt);
 	}
 
 	protected handleArgs(args: any) {

@@ -9,8 +9,8 @@ import type { PuppeteerLifeCycleEvent } from 'puppeteer';
 import type { Viewport } from 'puppeteer';
 
 export declare type ActionConfig = {
-    action: string;
-    arguments: string[];
+    name: string;
+    arguments?: string[];
 };
 
 export declare class AgentBrowser implements IAgentBrowser {
@@ -69,13 +69,16 @@ export declare class AgentDriver implements IAgentDriver {
     elementSelector: IElementSelector;
     messageBuilder: IMessageBuilder;
     inputController: IInputController;
+    messageSender: IMessageSender;
     actions: Record<string, IDriverAction>;
     pageScraper: IPageScraper;
     definitions: any[];
+    opts: DriverOpts;
     constructor(opts?: DriverOpts);
+    createMessageSender(): MessageSender;
     setDefinitions(definitions: any[]): void;
-    addDefinition(definition: any): void;
-    addDefinitions(definitions: any[]): void;
+    addDefinition(definition: any, overwrite?: boolean): void;
+    addDefinitions(definitions: any[], overwrite?: boolean): void;
     defaultDefinitions(): ({
         name: string;
         description: string;
@@ -249,12 +252,12 @@ export declare class AgentDriver implements IAgentDriver {
     protected get autopilotOn(): boolean;
     protected notFunction(nextStep: any): Promise<void>;
     protected createMessage(content: string): Promise<string>;
-    getInput(msg: string): Promise<string>;
+    getInput(prompt: string): Promise<string>;
     protected setAiMessage(nextContent: string): Promise<void>;
     sendMessage(msg: string): void;
     doStep(context: string[], nextStep: any, linksAndInputs: any, element: any): Promise<void>;
     protected createPageScraper(): PageScraper;
-    protected log(msg: any): void;
+    log(msg: any): void;
     protected logContext(): void;
     protected hasContent(): boolean;
     protected getPageContent(): Promise<string>;
@@ -262,12 +265,14 @@ export declare class AgentDriver implements IAgentDriver {
     protected get msg(): StructuredMsg;
     protected performInteraction(): Promise<void>;
     addToContext(data: any): void;
-    sendContextualMessage(_structuredMsg: StructuredMsg, _context?: string[]): Promise<void>;
+    sendContextualMessage(structuredMsg: StructuredMsg, context: any, actionConfig?: {
+        name: string;
+    }): Promise<void>;
 }
 
 export declare class AgentPlanner implements IAgentPlanner {
     context: any[];
-    response?: any;
+    aiAgentResponse?: any;
     assignedMsg?: AssignedMsg;
     promptMessage?: string;
     promptText?: string;
@@ -280,6 +285,7 @@ export declare class AgentPlanner implements IAgentPlanner {
     model: string;
     opts: PlannerOpts;
     constructor(context: any, opts?: PlannerOpts);
+    get definitions(): any[];
     setDefinitions(definitions: any[]): void;
     runPlan(): Promise<void>;
     protected createMessageSender(): MessageSender;
@@ -298,9 +304,8 @@ export declare class AgentPlanner implements IAgentPlanner {
     protected addResponseToContext(response: HTTPResponse): void;
     protected getAgentResponse(): Promise<void>;
     protected sendMessageToController(msg: any, context: any, actionConfig: any): void;
-    protected getResponse(): Promise<{}>;
     protected handleAcceptPlan(): Promise<void>;
-    protected getInput(_prompt: string): string;
+    protected getInput(prompt: string): Promise<string>;
     protected handleArgs(args: any): void;
     protected print(data: any): void;
 }
@@ -329,6 +334,7 @@ export declare abstract class BaseDriverAction implements IDriverAction {
     definition: any;
     opts: IDriverActionOpts;
     constructor(driver: IAgentDriver, fnArgs: FnArgs, context: any[], opts?: IDriverActionOpts);
+    protected initialize(): void;
     setMessage(message: string): void;
     addToMessage(message: string): void;
     get page(): Page | undefined;
@@ -345,7 +351,7 @@ declare type BrowserOpts = {
     viewport?: ViewportOpts;
 };
 
-export declare class ClickLinkAction extends BaseDriverAction implements IClickLinkAction {
+export declare class ClickLinkAction extends ElementAction implements IClickLinkAction {
     message: string;
     link?: HTMLAnchorElement;
     linkId?: string;
@@ -359,7 +365,6 @@ export declare class ClickLinkAction extends BaseDriverAction implements IClickL
     navigator: IPageNavigator;
     constructor(driver: IAgentDriver, fnArgs: FnArgs, context: Context, linksAndInputs: any[]);
     protected createNavigator(): PageNavigator;
-    protected get elementSelector(): IElementSelector;
     protected missingLinkId(): void;
     missingLinkText(): void;
     findLink(): any;
@@ -557,6 +562,11 @@ export declare type DriverOpts = DebugOpts & {
     definitions?: any[];
 };
 
+declare abstract class ElementAction extends BaseDriverAction implements IDriverAction {
+    protected getTabbableElements(): Promise<ElementHandle<Element>[]>;
+    protected get elementSelector(): IElementSelector;
+}
+
 export declare class ElementEvaluator {
     element: Element;
     id: number;
@@ -627,16 +637,18 @@ export declare class ElementTypeHandler implements IElementTypeHandler {
 
 export declare type FnArgs = Record<string, any>;
 
-export declare class GotoUrlAction extends BaseDriverAction implements IGotoUrlAction {
+export declare class GotoUrlAction extends ElementAction implements IGotoUrlAction {
     waitUntil: PuppeteerLifeCycleEvent;
-    linksAndInputs: any[];
+    linksAndInputs?: ElementHandle<Element>[];
     onStart(url: string): void;
     execute(): Promise<void>;
     onStartScraping(): void;
     get defaultGotoErrorMessage(): string;
-    getTabbableElements(): Promise<never[]>;
+    protected getTabbableElements(): Promise<ElementHandle<Element>[]>;
     downloadError(error: unknown): string | undefined;
 }
+
+export declare type GotoUrlOpts = DebugOpts & {};
 
 export declare class HtmlFormatter implements IHtmlFormatter {
     html?: string;
@@ -672,6 +684,8 @@ export declare interface IAgentDriver {
     setDefinitions(definitions: any[]): void;
     addDefinitions(definitions: any[]): void;
     inputController: IInputController;
+    log(msg: any): void;
+    messageSender: IMessageSender;
 }
 
 export declare interface IAgentPlanner {
@@ -695,6 +709,7 @@ export declare interface IDocumentTraverser {
 
 export declare interface IDriverAction {
     execute(): Promise<void>;
+    definition: any;
 }
 
 export declare type IDriverActionOpts = DebugOpts & {
@@ -743,10 +758,6 @@ export declare class InteractiveElementHandler {
     addBoundingBoxTo(element: Element, id: number): void;
 }
 
-declare interface IOpenAITokenCostCalculator {
-    tokenCost(promptTokens: number, completionTokens: number): number;
-}
-
 export declare interface IPageNavigator {
     waitForNavigation(page: Page): Promise<void>;
 }
@@ -776,6 +787,11 @@ export declare interface ITerminalReader {
     question: IQuestionFn;
 }
 
+declare interface ITokenCostCalculator {
+    tokenCost(promptTokens: number, completionTokens: number): number;
+    printCurrentCost(): void;
+}
+
 export declare class MessageBuilder implements IMessageBuilder {
     content: string;
     url: string;
@@ -793,7 +809,7 @@ export declare class MessageSender implements IMessageSender {
     autopilot: boolean;
     opts: DebugOpts;
     model: string;
-    calculator?: IOpenAITokenCostCalculator;
+    calculator?: ITokenCostCalculator;
     actions: any[];
     controller?: IAIController;
     driver: IAgentDriver;
@@ -858,10 +874,10 @@ declare class OpenAITokenCostCalculator {
     model: string;
     debug: boolean;
     constructor(driver: IAgentDriver, opts?: DebugOpts);
+    printCurrentCost(): void;
     tokenCost(promptTokens: number, completionTokens: number): number;
     protected getTokenPrice(model: string, direction: string): number;
     protected round(num: number, decimals?: number): string;
-    protected printCurrentCost(): void;
     protected print(message?: string): void;
 }
 
@@ -878,7 +894,7 @@ export declare class PageNavigator implements IPageNavigator {
         navigationTimeout: number;
     };
     waitForNavigation(page: Page): Promise<void>;
-    log(_msg: string): void;
+    log(msg: string): void;
     onError(_error: any): void;
 }
 
@@ -919,7 +935,10 @@ export declare class ReadFileAction extends BaseDriverAction implements IReadFil
 }
 
 export declare class ReceiveInputAction extends BaseDriverAction implements IReceiveInputAction {
+    costCalculator?: ITokenCostCalculator;
     text?: string;
+    protected initialize(): void;
+    protected createCostCalculator(): OpenAITokenCostCalculator;
     execute(): Promise<void>;
     protected setText(text?: string): void;
     protected textFromFnArgs(): any;
@@ -942,14 +961,14 @@ export declare type StructuredMsg = {
     url: string;
 };
 
-export declare class SubmitFormAction extends BaseDriverAction implements ISumbitFormAction {
+export declare class SubmitFormAction extends ElementAction implements ISumbitFormAction {
     formData: any;
     prevInput: any;
-    linksAndInputs: any;
+    linksAndInputs: ElementHandle<Element>[];
     navigator: IPageNavigator;
     constructor(driver: IAgentDriver, fnArgs: FnArgs, context: any[], opts?: DebugOpts);
     protected createNavigator(): PageNavigator;
-    selectElement(elementSelector: string): Promise<ElementHandle<Element> | null | undefined>;
+    selectElement(elementCssSelector: string): Promise<ElementHandle<Element> | null | undefined>;
     getElementAttr(element: ElementHandle<Element>, attrName: string): Promise<string>;
     getElementType(element: ElementHandle<Element>): Promise<string>;
     getElementName(element: ElementHandle<Element>): Promise<string>;
@@ -960,7 +979,6 @@ export declare class SubmitFormAction extends BaseDriverAction implements ISumbi
     execute(): Promise<void>;
     protected waitForNavigation(): Promise<void>;
     protected onSubmit(): Promise<void>;
-    getTabbableElements(): Promise<void>;
     onSubmitFormError(error: any): void;
 }
 

@@ -3,6 +3,7 @@ import type { DebugOpts } from "../../../types";
 
 export interface IDriverAction {
 	execute(): Promise<void>;
+	definition: any;
 }
 
 export type IDriverActionOpts = DebugOpts & {
@@ -32,7 +33,11 @@ export abstract class BaseDriverAction implements IDriverAction {
 		this.context = context;
 		this.debug = Boolean(opts.debug);
 		this.definition = opts.definition;
+		this.initialize();
 	}
+
+	// override as needed
+	protected initialize() {}
 
 	setMessage(message: string) {
 		this.message = message;

@@ -1,7 +1,7 @@
 import type { DebugOpts } from "../../../types";
 import fs from "node:fs";
 import {
-	type IOpenAITokenCostCalculator as IAITokenCostCalculator,
+	type ITokenCostCalculator as IAITokenCostCalculator,
 	OpenAITokenCostCalculator,
 } from "../../../ai/openai/token-cost-calculator";
 import type { ActionConfig } from "../../agent-planner";
@@ -84,7 +84,6 @@ export class MessageSender implements IMessageSender {
 			this.definitions,
 		);
 
-		// TODO: ??
 		const data = await this.getAiResponseData(
 			actionConfig,
 			filteredDefinitions,
@@ -128,7 +127,7 @@ export class MessageSender implements IMessageSender {
 		filteredDefinitions: any[],
 	) {
 		this.print(`${this.taskPrefix}Sending ChatGPT request...`);
-		const action = actionConfig.action;
+		const action = actionConfig.name;
 		return await this.controller?.getResponse(
 			this.messages,
 			filteredDefinitions,
@@ -163,9 +162,6 @@ export class MessageSender implements IMessageSender {
 		this.tokenUsage.completionTokens += data.usage.completion_tokens;
 		this.tokenUsage.promptTokens += data.usage.prompt_tokens;
 		this.tokenUsage.totalTokens += data.usage.total_tokens;
-
-		// TODO
-
 		return this.tokenCost(data.usage.promptTokens, data.usage.completionTokens);
 	}
 

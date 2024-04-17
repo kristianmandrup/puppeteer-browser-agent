@@ -1,8 +1,9 @@
 import type { IAgentDriver } from "../../agent";
 import type { DebugOpts } from "../../types";
 
-export interface IOpenAITokenCostCalculator {
+export interface ITokenCostCalculator {
 	tokenCost(promptTokens: number, completionTokens: number): number;
+	printCurrentCost(): void;
 }
 export class OpenAITokenCostCalculator {
 	tokenUsage = {
@@ -19,6 +20,20 @@ export class OpenAITokenCostCalculator {
 		this.driver = driver;
 		this.model = driver.model;
 		this.debug = Boolean(opts.debug);
+	}
+
+	public printCurrentCost() {
+		const { tokenUsage } = this;
+		const cost = this.tokenCost(
+			tokenUsage.promptTokens,
+			tokenUsage.completionTokens,
+		);
+
+		this.print(
+			`Current cost: ${this.round(cost, 2)} USD (${
+				tokenUsage.totalTokens
+			} tokens)`,
+		);
 	}
 
 	public tokenCost(promptTokens: number, completionTokens: number) {
@@ -58,20 +73,6 @@ export class OpenAITokenCostCalculator {
 
 	protected round(num: number, decimals = 2) {
 		return num.toFixed(decimals);
-	}
-
-	protected printCurrentCost() {
-		const { tokenUsage } = this;
-		const cost = this.tokenCost(
-			tokenUsage.promptTokens,
-			tokenUsage.completionTokens,
-		);
-
-		this.print(
-			`Current cost: ${this.round(cost, 2)} USD (${
-				tokenUsage.totalTokens
-			} tokens)`,
-		);
 	}
 
 	protected print(message = "") {

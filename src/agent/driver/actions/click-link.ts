@@ -1,14 +1,12 @@
 import { TimeoutError, type Page } from "puppeteer";
 import type { Context, FnArgs, IAgentDriver } from "../agent-driver";
-import { BaseDriverAction, type IDriverAction } from "./base-action";
+import type { IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
+import { ElementAction } from "./element-action";
 
 export interface IClickLinkAction extends IDriverAction {}
 
-export class ClickLinkAction
-	extends BaseDriverAction
-	implements IClickLinkAction
-{
+export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	message = "";
 	link?: HTMLAnchorElement;
 	linkId?: string;
@@ -39,10 +37,6 @@ export class ClickLinkAction
 
 	protected createNavigator() {
 		return new PageNavigator(this.driver);
-	}
-
-	protected get elementSelector() {
-		return this.driver.elementSelector;
 	}
 
 	protected missingLinkId() {

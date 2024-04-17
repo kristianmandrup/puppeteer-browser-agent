@@ -1,3 +1,7 @@
+import {
+	type ITokenCostCalculator,
+	OpenAITokenCostCalculator,
+} from "../../../ai/openai/token-cost-calculator";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 
 export interface IReceiveInputAction extends IDriverAction {
@@ -8,7 +12,16 @@ export class ReceiveInputAction
 	extends BaseDriverAction
 	implements IReceiveInputAction
 {
+	costCalculator?: ITokenCostCalculator;
 	text?: string;
+
+	protected initialize(): void {
+		this.costCalculator = this.createCostCalculator();
+	}
+
+	protected createCostCalculator() {
+		return new OpenAITokenCostCalculator(this.driver, this.opts);
+	}
 
 	public async execute() {
 		this.setText(this.textFromFnArgs());
@@ -43,6 +56,6 @@ export class ReceiveInputAction
 	}
 
 	protected printCurrentCost() {
-		// TODO: use cost calculator
+		this.costCalculator?.printCurrentCost();
 	}
 }

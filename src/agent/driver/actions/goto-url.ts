@@ -1,10 +1,15 @@
-import type { PuppeteerLifeCycleEvent } from "puppeteer";
-import { BaseDriverAction, type IDriverAction } from "./base-action";
+import type { ElementHandle, PuppeteerLifeCycleEvent } from "puppeteer";
+import type { IDriverAction } from "./base-action";
+import type { DebugOpts } from "../../../types";
+import type { IElementSelector } from "../../../elements";
+import { ElementAction } from "./element-action";
 
 export interface IGotoUrlAction extends IDriverAction {}
-export class GotoUrlAction extends BaseDriverAction implements IGotoUrlAction {
+
+export type GotoUrlOpts = DebugOpts & {};
+export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 	waitUntil: PuppeteerLifeCycleEvent = "load";
-	linksAndInputs: any[] = [];
+	linksAndInputs?: ElementHandle<Element>[];
 
 	onStart(url: string) {
 		this.log(`${this.taskPrefix}Going to ${url}`);
@@ -44,10 +49,11 @@ export class GotoUrlAction extends BaseDriverAction implements IGotoUrlAction {
 		return "There was an error going to the URL";
 	}
 
-	// TODO
-	// biome-ignore lint/suspicious/useAwait: <explanation>
-	async getTabbableElements() {
-		return [];
+	protected async getTabbableElements() {
+		if (!this.page) {
+			throw new Error("Missing page");
+		}
+		return await this.elementSelector?.getElements(this.page);
 	}
 
 	downloadError(error: unknown): string | undefined {

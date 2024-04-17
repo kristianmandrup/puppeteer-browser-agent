@@ -1,18 +1,19 @@
 import type { ElementHandle } from "puppeteer";
-import { BaseDriverAction, type IDriverAction } from "./base-action";
+import type { IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
 import type { FnArgs, IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
+import { ElementAction } from "./element-action";
 
 export interface ISumbitFormAction extends IDriverAction {}
 
 export class SubmitFormAction
-	extends BaseDriverAction
+	extends ElementAction
 	implements ISumbitFormAction
 {
 	formData: any;
 	prevInput: any;
-	linksAndInputs: any;
+	linksAndInputs: ElementHandle<Element>[] = [];
 	navigator: IPageNavigator;
 
 	constructor(
@@ -30,8 +31,8 @@ export class SubmitFormAction
 		return new PageNavigator(this.driver, this.opts);
 	}
 
-	async selectElement(elementSelector: string) {
-		return await this.page?.$(elementSelector);
+	async selectElement(elementCssSelector: string) {
+		return await this.page?.$(elementCssSelector);
 	}
 
 	async getElementAttr(element: ElementHandle<Element>, attrName: string) {
@@ -87,10 +88,10 @@ export class SubmitFormAction
 			this.resetMessage();
 
 			try {
-				const elementSelector = `.pgpt-element${elementId}`;
-				const element = await this.selectElement(elementSelector);
+				const elementCssSelector = `.pgpt-element${elementId}`;
+				const element = await this.selectElement(elementCssSelector);
 				if (!element) {
-					throw new Error(`No such element on page: ${elementSelector}`);
+					throw new Error(`No such element on page: ${elementCssSelector}`);
 				}
 				if (!this.prevInput) {
 					this.prevInput = element;
@@ -113,9 +114,11 @@ export class SubmitFormAction
 		this.onSubmit();
 	}
 
-	// TODO
 	protected async waitForNavigation() {
-		await this.navigator.waitForNavigation;
+		if (!this.page) {
+			throw new Error("Missing page");
+		}
+		return await this.navigator.waitForNavigation(this.page);
 	}
 
 	protected async onSubmit() {
@@ -142,9 +145,6 @@ export class SubmitFormAction
 		this.log(`${this.taskPrefix}Scraping page...`);
 		this.linksAndInputs = await this.getTabbableElements();
 	}
-
-	// TODO
-	async getTabbableElements() {}
 
 	onSubmitFormError(error: any) {
 		this.log(error);

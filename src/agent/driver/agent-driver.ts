@@ -17,6 +17,10 @@ import {
 	TerminalInputController,
 	type IInputController,
 } from "./input/cli-input.js";
+import {
+	type IMessageSender,
+	MessageSender,
+} from "./message/message-sender.js";
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type Context = any[];
 export type StructuredMsg = {
@@ -55,6 +59,8 @@ export interface IAgentDriver {
 	setDefinitions(definitions: any[]): void;
 	addDefinitions(definitions: any[]): void;
 	inputController: IInputController;
+	log(msg: any): void;
+	messageSender: IMessageSender;
 }
 
 export class AgentDriver implements IAgentDriver {
@@ -78,12 +84,15 @@ export class AgentDriver implements IAgentDriver {
 	elementSelector: IElementSelector;
 	messageBuilder: IMessageBuilder;
 	inputController: IInputController;
+	messageSender: IMessageSender;
 
 	actions: Record<string, IDriverAction> = {};
 	pageScraper: IPageScraper;
 	definitions: any[];
+	opts: DriverOpts;
 
 	constructor(opts: DriverOpts = {}) {
+		this.opts = opts;
 		this.debug = Boolean(opts.debug);
 		this.browser = this.createAgentBrowser();
 		if (!this.page) {
@@ -93,23 +102,32 @@ export class AgentDriver implements IAgentDriver {
 		this.elementSelector = this.createElementSelector();
 		this.pageScraper = this.createPageScraper();
 		this.messageBuilder = this.createMessageBuilder();
+		this.messageSender = this.createMessageSender();
 		this.inputController = this.createInputController();
+	}
+
+	createMessageSender() {
+		return new MessageSender(this, this.opts);
 	}
 
 	setDefinitions(definitions: any[]) {
 		this.definitions = definitions;
 	}
 
-	addDefinition(definition: any) {
+	addDefinition(definition: any, overwrite = false) {
 		if (Array.isArray(definition)) {
-			this.addDefinitions(definition);
+			this.addDefinitions(definition, overwrite);
 			return;
 		}
-		this.addDefinitions([definition]);
+		this.addDefinitions([definition], overwrite);
 	}
 
-	addDefinitions(definitions: any[]) {
-		this.definitions.push(...definitions);
+	addDefinitions(definitions: any[], overwrite = false) {
+		for (const definition of definitions) {
+			if (overwrite || !this.definitions.includes(definition)) {
+				this.definitions.push(definition);
+			}
+		}
 	}
 
 	defaultDefinitions() {
@@ -140,6 +158,7 @@ export class AgentDriver implements IAgentDriver {
 
 	public registerAction(label: string, action: IDriverAction) {
 		this.actions[label] = action;
+		this.addDefinition(action.definition);
 	}
 
 	public removeAction(label: string) {
@@ -264,9 +283,8 @@ export class AgentDriver implements IAgentDriver {
 		return await this.getInput("GPT: " + content + "\nYou: ");
 	}
 
-	// TODO: override
-	public async getInput(msg: string) {
-		return await this.inputController.getInput(msg);
+	public async getInput(prompt: string) {
+		return await this.inputController.getInput(prompt);
 	}
 
 	protected async setAiMessage(nextContent: string) {
@@ -304,7 +322,7 @@ export class AgentDriver implements IAgentDriver {
 		return new PageScraper(this);
 	}
 
-	protected log(msg: any) {
+	public log(msg: any) {
 		if (!this.debug) {
 			return;
 		}
@@ -358,11 +376,17 @@ export class AgentDriver implements IAgentDriver {
 		this.context?.push(data);
 	}
 
-	// TODO
 	async sendContextualMessage(
-		_structuredMsg: StructuredMsg,
-		_context: string[] = [],
+		structuredMsg: StructuredMsg,
+		context: any,
+		actionConfig = {
+			name: "auto",
+		},
 	) {
-		//
+		this.messageSender.sendMessageToController(
+			structuredMsg,
+			context,
+			actionConfig,
+		);
 	}
 }

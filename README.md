@@ -1,8 +1,10 @@
 # Puppeteer Browser Agent
 
-## Status
+A library with convenient building blocks to be used for creating a Puppeteer browser agent that can communicate with external actors, agents and users to instruct the agent to take browser actions accordingly to fulfill an objective.
 
-WIP - based on work by unconvcode/GPT-puppeteer
+## Inspiration
+
+This library is based on original work from [unconv/puppeteer-gpt](https://github.com/unconv/puppeteer-gpt)
 
 ## Installation
 
@@ -82,6 +84,8 @@ export const definitions = [
 ];
 ```
 
+Note that actions may include a `definition` property as well. If such a property exists on the action, this defintion will be added automatically to the set of `definitions` when the action is registered.
+
 ## Custom implementation example
 
 A custom implementation would look like the following snippet, where factory methods in each custom class can be used to wire the implementation as needed.
@@ -121,6 +125,10 @@ export class MyAgentDriver extends AgentDriver {
 
   protected createMessageBuilder() {
     return new MyMessageBuilder(this);
+  }
+
+  protected createMessageSender() {
+    return new MyMessageSender(this);
   }
 
   protected createPageScaper() {
