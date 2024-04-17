@@ -1,16 +1,15 @@
 export type IQuestionFn = (text: string) => Promise<string>;
-
 export interface ITerminalReader {
 	question: IQuestionFn;
 }
 
 export type ICreateTerminalReader = () => ITerminalReader;
 
-export interface ITerminalInputController {
-	execute(text: string): Promise<string>;
+export interface IInputController {
+	getInput(text: string): Promise<string>;
 }
 
-export class TerminalInputController implements ITerminalInputController {
+export class TerminalInputController implements IInputController {
 	createReader: ICreateTerminalReader;
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -29,7 +28,7 @@ export class TerminalInputController implements ITerminalInputController {
 	// 		});
 	// 	});
 
-	async execute(text: string) {
+	async getInput(text: string) {
 		const reader: ITerminalReader = this.createReader();
 		return await reader.question(text);
 	}

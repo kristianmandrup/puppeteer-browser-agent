@@ -13,6 +13,10 @@ import {
 	MessageBuilder,
 } from "./message/message-builder.js";
 import type { DebugOpts } from "../../types.js";
+import {
+	TerminalInputController,
+	type IInputController,
+} from "./input/cli-input.js";
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type Context = any[];
 export type StructuredMsg = {
@@ -50,6 +54,7 @@ export interface IAgentDriver {
 	definitions: any[];
 	setDefinitions(definitions: any[]): void;
 	addDefinitions(definitions: any[]): void;
+	inputController: IInputController;
 }
 
 export class AgentDriver implements IAgentDriver {
@@ -72,6 +77,7 @@ export class AgentDriver implements IAgentDriver {
 	context?: string[] = [];
 	elementSelector: IElementSelector;
 	messageBuilder: IMessageBuilder;
+	inputController: IInputController;
 
 	actions: Record<string, IDriverAction> = {};
 	pageScraper: IPageScraper;
@@ -87,6 +93,7 @@ export class AgentDriver implements IAgentDriver {
 		this.elementSelector = this.createElementSelector();
 		this.pageScraper = this.createPageScraper();
 		this.messageBuilder = this.createMessageBuilder();
+		this.inputController = this.createInputController();
 	}
 
 	setDefinitions(definitions: any[]) {
@@ -107,6 +114,16 @@ export class AgentDriver implements IAgentDriver {
 
 	defaultDefinitions() {
 		return definitions;
+	}
+
+	createDefaultInputReader() {
+		return {
+			question: async (text: string) => text,
+		};
+	}
+
+	protected createInputController() {
+		return new TerminalInputController(this.createDefaultInputReader);
 	}
 
 	protected createMessageBuilder() {
@@ -251,12 +268,10 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	// TODO: override
-	// biome-ignore lint/suspicious/useAwait: <explanation>
 	public async getInput(msg: string) {
-		return msg;
+		return await this.inputController.getInput(msg);
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	protected async setAiMessage(nextContent: string) {
 		this.message = await this.createMessage(nextContent);
 		this.aiMsg = {
@@ -283,7 +298,7 @@ export class AgentDriver implements IAgentDriver {
 
 		this.doFunction(nextStep) || this.notFunction(nextStep);
 		this.performInteraction();
-		this.logInfo();
+		this.logContext();
 
 		await this.doStep(context, nextStep, linksAndInputs, element);
 	}
@@ -299,34 +314,34 @@ export class AgentDriver implements IAgentDriver {
 		console.info(msg);
 	}
 
-	logInfo() {
+	protected logContext() {
 		if (!this.debug) {
 			return;
 		}
 		fs.writeFileSync("context.json", JSON.stringify(this.context, null, 2));
 	}
 
-	hasContent() {
+	protected hasContent() {
 		return !this.noContent;
 	}
 
-	async getPageContent() {
+	protected async getPageContent() {
 		if (!this.page) {
 			throw new Error("Missing page for scraping");
 		}
 		return await this.pageScraper.getPageContent(this.page);
 	}
 
-	addPageContent(pageContent: string) {
+	protected addPageContent(pageContent: string) {
 		const content = `\n\n${pageContent.substring(0, this.contextLengthLimit)}`;
 		this.messageBuilder.addContent(content);
 	}
 
-	get msg(): StructuredMsg {
+	protected get msg(): StructuredMsg {
 		return this.messageBuilder.message;
 	}
 
-	async performInteraction() {
+	protected async performInteraction() {
 		if (!this.hasContent()) {
 			const pageContent = await this.getPageContent();
 			this.addPageContent(pageContent);

@@ -1,9 +1,14 @@
 import cheerio from "cheerio";
+import type { IAgentDriver } from "../agent";
 const $ = cheerio;
 
 type Obj = Record<string, string | undefined>;
 
-export class TagBuilder {
+export interface ITagBuilder {
+	build(): any;
+}
+
+export class TagBuilder implements ITagBuilder {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	element: any;
 
@@ -19,9 +24,11 @@ export class TagBuilder {
 	placeholder?: string;
 	textContent?: string;
 	obj: Obj = {};
+	driver: IAgentDriver;
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	constructor(element: any) {
+	constructor(driver: IAgentDriver, element: any) {
+		this.driver = driver;
 		this.element = element;
 		this.tagName = element.name;
 		this.value = $(element).attr("value");

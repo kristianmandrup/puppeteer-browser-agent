@@ -2,7 +2,7 @@ import type { Page } from "puppeteer";
 import { ElementEvaluator } from "./evaluator.js";
 import type { IAgentDriver } from "../agent/index.js";
 
-export class ElementHandler {
+export class InteractiveElementHandler {
 	driver: IAgentDriver;
 	page: Page;
 

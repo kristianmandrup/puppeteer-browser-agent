@@ -1,6 +1,6 @@
 import type { ElementHandle, Page } from "puppeteer";
 import fs from "node:fs";
-import { ElementHandler } from "./handler.js";
+import { InteractiveElementHandler } from "./interactive-handler.js";
 
 type SelectorOpts = {
 	debug?: boolean;
@@ -12,7 +12,7 @@ export interface IElementSelector {
 
 export class ElementSelector implements IElementSelector {
 	page: Page;
-	navigator: ElementHandler;
+	navigator: InteractiveElementHandler;
 	skipped: ElementHandle<Element>[] = [];
 	selected: ElementHandle<Element>[] = [];
 	debug?: boolean;
@@ -24,7 +24,7 @@ export class ElementSelector implements IElementSelector {
 	}
 
 	createPageNavigator() {
-		return new ElementHandler(this.page);
+		return new InteractiveElementHandler(this.page);
 	}
 
 	get elementSelector() {

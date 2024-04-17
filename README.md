@@ -114,6 +114,11 @@ export class MyMessageSender extends MessageSender {
 export class MyAgentDriver extends AgentDriver {
   // override as necessary
 
+  protected createInputController() {
+    // pass a createInputReader factory function
+    return new MyTerminalInputController(createInputReader);
+  }
+
   protected createMessageBuilder() {
     return new MyMessageBuilder(this);
   }
