@@ -1,5 +1,5 @@
 import { TimeoutError, type Page } from "puppeteer";
-import type { AgentDriver, Context, FnArgs } from "..";
+import type { AgentDriver, Context, FnArgs } from "../driver";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 
 export interface IClickLinkAction extends IDriverAction {}

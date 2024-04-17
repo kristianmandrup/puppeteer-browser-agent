@@ -1,6 +1,10 @@
 import cheerio, { type CheerioAPI } from "cheerio";
 
-export class HtmlFormatter {
+export interface IHtmlFormatter {
+	format(): any;
+}
+
+export class HtmlFormatter implements IHtmlFormatter {
 	html: string;
 	$: CheerioAPI;
 
@@ -10,7 +14,7 @@ export class HtmlFormatter {
 		this.$ = cheerio.load(cleanHtml);
 	}
 
-	get prioritySelectors() {
+	protected get prioritySelectors() {
 		return [
 			"main",
 			'[role="main"]',
@@ -21,7 +25,7 @@ export class HtmlFormatter {
 		];
 	}
 
-	format() {
+	public format() {
 		const $ = this.$;
 		$("script, style").remove();
 

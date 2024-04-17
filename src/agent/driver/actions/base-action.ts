@@ -1,4 +1,4 @@
-import type { AgentDriver, Context, FnArgs } from "..";
+import type { AgentDriver, Context, FnArgs } from "../driver";
 import type { DebugOpts } from "../../../types";
 
 export interface IDriverAction {
@@ -27,6 +27,10 @@ export abstract class BaseDriverAction implements IDriverAction {
 
 	setMessage(message: string) {
 		this.message = message;
+	}
+
+	addToMessage(message: string) {
+		this.message += message;
 	}
 
 	get page() {

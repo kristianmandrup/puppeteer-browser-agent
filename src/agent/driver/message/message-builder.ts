@@ -1,6 +1,11 @@
-import type { StructuredMsg } from "..";
+import type { StructuredMsg } from "../driver";
 
-export class MessageBuilder {
+export interface IMessageBuilder {
+	setContent(content: string): void;
+	addContent(content: string): void;
+	setUrl(url: string): void;
+}
+export class MessageBuilder implements IMessageBuilder {
 	content = "";
 	url = "";
 
@@ -11,15 +16,15 @@ export class MessageBuilder {
 		};
 	}
 
-	setContent(content = "") {
+	public setContent(content = "") {
 		this.content = content;
 	}
 
-	addContent(content: string) {
+	public addContent(content: string) {
 		this.content += content;
 	}
 
-	setUrl(url: string) {
+	public setUrl(url: string) {
 		this.url = url;
 	}
 }

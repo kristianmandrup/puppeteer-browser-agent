@@ -1,6 +1,10 @@
 import type { Page, PuppeteerLifeCycleEvent } from "puppeteer";
 
-export class PageNavigator {
+export interface IDocumentNavigator {
+	waitForNavigation(page: Page): Promise<void>;
+}
+
+export class DocumentNavigator implements IDocumentNavigator {
 	navigationTimeout = 6000;
 	waitUntil: PuppeteerLifeCycleEvent = "load"; // puppeteer lifecycle event
 

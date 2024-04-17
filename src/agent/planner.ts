@@ -1,6 +1,6 @@
 import type { HTTPResponse } from "puppeteer";
 import fs from "node:fs";
-import { AgentDriver } from "./driver";
+import { AgentDriver } from "./driver/driver";
 import type { DebugOpts } from "../types";
 import {
 	type IMessageSender,

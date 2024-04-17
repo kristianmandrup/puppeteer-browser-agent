@@ -6,7 +6,11 @@ export interface ITerminalReader {
 
 export type ICreateTerminalReader = () => ITerminalReader;
 
-export class TerminalInputController {
+export interface ITerminalInputController {
+	execute(text: string): Promise<string>;
+}
+
+export class TerminalInputController implements ITerminalInputController {
 	createReader: ICreateTerminalReader;
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>

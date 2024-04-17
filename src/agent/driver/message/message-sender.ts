@@ -30,7 +30,7 @@ export interface IMessageSender {
 	): Promise<unknown>;
 }
 
-export class MessageSender {
+export class MessageSender implements IMessageSender {
 	debug: boolean;
 	messages: unknown[] = [];
 	tokenUsage: TokenUsage = {

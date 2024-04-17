@@ -1,6 +1,10 @@
 import type { Page } from "puppeteer";
 
-export class PageScraper {
+export interface IPageScraper {
+	getPageContent(page: Page): Promise<string>;
+}
+
+export class PageScraper implements IPageScraper {
 	async getPageContent(page: Page) {
 		const title = await page.evaluate(() => {
 			return document.title;

@@ -1,11 +1,12 @@
-import { ElementHandle } from "puppeteer";
-import { BaseDriverAction, IDriverAction } from "./base-action";
+import type { ElementHandle } from "puppeteer";
+import { BaseDriverAction, type IDriverAction } from "./base-action";
 
 export interface IGotoUrlAction extends IDriverAction {}
 
-export class GotoUrlAction extends BaseDriverAction {
+export class SubmitFormAction extends BaseDriverAction {
 	formData: any;
 	prevInput: any;
+	linksAndInputs: any;
 
 	async selectElement(elementSelector: string) {
 		return await this.page?.$(elementSelector);
@@ -54,11 +55,7 @@ export class GotoUrlAction extends BaseDriverAction {
 		this.message = "";
 	}
 
-	addToMessage(message: string) {
-		this.message += message;
-	}
-
-	async execute() {
+	public async execute() {
 		const { fnArgs } = this;
 		this.formData = fnArgs.form_data;
 
@@ -86,37 +83,48 @@ export class GotoUrlAction extends BaseDriverAction {
 					(await this.onIputField(element, data));
 			} catch (error) {
 				this.log(error);
-
 				this.addToMessage(
 					`Error typing "${data.text}" to input field ID ${data.element_id}\n`,
 				);
 			}
 		}
+		this.onSubmit();
+	}
 
-		if (fnArgs.submit !== false) {
-			print(task_prefix + `Submitting form`);
+	// TODO
+	protected async waitForNavigation() {}
 
-			try {
-				const form = await prev_input.evaluateHandle((input) =>
-					input.closest("form"),
-				);
-
-				await form.evaluate((form) => form.submit());
-				await wait_for_navigation(page);
-
-				let url = await page.url();
-
-				message += `Form sent! You are now on ${url}\n`;
-			} catch (error) {
-				if (debug) {
-					print(error);
-				}
-				print(task_prefix + `Error submitting form`);
-				message += "There was an error submitting the form.\n";
-			}
-
-			print(task_prefix + "Scraping page...");
-			linksAndInputs = await get_tabbable_elements(page);
+	protected async onSubmit() {
+		if (!this.fnArgs.submit) {
+			return;
 		}
+		this.log(`${this.taskPrefix}Submitting form`);
+
+		try {
+			const form = await this.prevInput.evaluateHandle((input: any) =>
+				input.closest("form"),
+			);
+
+			await form.evaluate((form: any) => form.submit());
+			await this.waitForNavigation();
+
+			const url = await this.page?.url();
+
+			this.addToMessage(`Form sent! You are now on ${url}\n`);
+		} catch (error) {
+			this.onSubmitFormError(error);
+		}
+
+		this.log(`${this.taskPrefix}Scraping page...`);
+		this.linksAndInputs = await this.getTabbableElements();
+	}
+
+	// TODO
+	async getTabbableElements() {}
+
+	onSubmitFormError(error: any) {
+		this.log(error);
+		this.log(`${this.taskPrefix}Error submitting form`);
+		this.addToMessage("There was an error submitting the form.\n");
 	}
 }
