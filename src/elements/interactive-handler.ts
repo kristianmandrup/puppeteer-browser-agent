@@ -4,9 +4,9 @@ import type { IAgentDriver } from "../agent/index.js";
 
 export class InteractiveElementHandler {
 	driver: IAgentDriver;
-	page: Page;
+	page?: Page;
 
-	constructor(driver: IAgentDriver, page: Page) {
+	constructor(driver: IAgentDriver, page?: Page) {
 		this.driver = driver;
 		this.page = page;
 	}
@@ -24,7 +24,10 @@ export class InteractiveElementHandler {
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	async nextInteractiveElement(element: any, id: number, selector = "*") {
-		const page = this.page;
+		const { page } = this;
+		if (!page) {
+			throw new Error("Missing page");
+		}
 		const onEvaluate = this.onEvaluate.bind(this);
 		const obj = await page.evaluate(onEvaluate, element, id, selector);
 

@@ -128,7 +128,7 @@ export class MyAgentDriver extends AgentDriver {
   }
 
   protected createElementSelector() {
-    return new MyElementSelector(this, this.page);
+    return new MyElementSelector(this);
   }
 
   protected createAgentBrowser() {
@@ -157,6 +157,10 @@ export class MyPageNavigator extends DocumentNavigator {
 
 export class MyPageScraper extends PageScraper {
   // override as necessary
+
+  createHtmlFormatter() {
+    return new MyHtmlFormatter(this.driver);
+  }
 }
 
 // And so on...
@@ -181,6 +185,7 @@ const myGotoUrlAction = new MyGotoUrlAction();
 // ...
 
 planner.driver.registerAction("goto_url", myGotoUrlAction);
+// register more actions as needed
 
 // set action definitions
 planner.driver.setDefinitions(definitions);

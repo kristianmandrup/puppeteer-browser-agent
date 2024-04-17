@@ -1,22 +1,27 @@
 import type { Element } from "cheerio";
 import type { DocumentTraverser } from "./doc-traverser";
-import { TagBuilder } from "../../../elements";
+import { type ITagBuilder, TagBuilder } from "../../../elements";
+import type { IAgentDriver } from "../driver";
 
-export interface IElementHandler {
-	handle(): void;
+export interface IElementTypeHandler {
+	handle(element: Element): void;
 }
 
-export class ElementHandler implements IElementHandler {
-	element: Element;
+export class ElementTypeHandler implements IElementTypeHandler {
+	element?: Element;
 	docTraverser: DocumentTraverser;
 	output = "";
+	driver: IAgentDriver;
+	tagBuilder: ITagBuilder;
 
-	constructor(element: Element, docTraverser: DocumentTraverser) {
-		this.element = element;
+	constructor(driver: IAgentDriver, docTraverser: DocumentTraverser) {
+		this.driver = driver;
 		this.docTraverser = docTraverser;
+		this.tagBuilder = this.createTagBuilder();
 	}
 
-	public handle() {
+	public handle(element: Element) {
+		this.element = element;
 		this.handleMisc();
 		this.handleHeaderElement();
 		this.handleFormElement();
@@ -36,14 +41,14 @@ export class ElementHandler implements IElementHandler {
 	protected handleHeaderElement() {
 		const { $, element } = this;
 		if ($(element).is("h1, h2, h3, h4, h5, h6")) {
-			this.addToOutput(`<${element.name}>`);
+			this.addToOutput(`<${element?.name}>`);
 		}
 	}
 
 	protected handleFormElement() {
 		const { $, element } = this;
 		if ($(element).is("form")) {
-			this.addToOutput(`\n<${element.name}>\n`);
+			this.addToOutput(`\n<${element?.name}>\n`);
 		}
 	}
 
@@ -61,12 +66,15 @@ export class ElementHandler implements IElementHandler {
 		}
 	}
 
-	protected makeTag(element: Element) {
-		return this.createTagBuilder(element).build();
+	protected makeTag(element?: Element) {
+		if (!element) {
+			throw new Error("Missing element to build tag from");
+		}
+		return this.tagBuilder.build(element);
 	}
 
-	protected createTagBuilder(element: Element) {
-		return new TagBuilder(element);
+	protected createTagBuilder() {
+		return new TagBuilder(this.driver);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -82,7 +90,7 @@ export class ElementHandler implements IElementHandler {
 	protected handleNonSpecialTag() {
 		const { $, element } = this;
 		const parent = element?.parent;
-		if (element.type === "tag" && parent && !$(parent).attr("pgpt-id")) {
+		if (element?.type === "tag" && parent && !$(parent).attr("pgpt-id")) {
 			this.addToOutput(
 				` ${
 					// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -104,7 +112,7 @@ export class ElementHandler implements IElementHandler {
 	}
 
 	protected handleChildren() {
-		const children = this.element.children;
+		const children = this.element?.children;
 		if (children) {
 			// biome-ignore lint/complexity/noForEach: <explanation>
 			// biome-ignore lint/suspicious/noExplicitAny: <explanation>

@@ -1,6 +1,6 @@
 import type { Element, CheerioAPI } from "cheerio";
 import { HtmlFormatter, type IHtmlFormatter } from "./html-formatter";
-import { ElementHandler } from "./element-handler";
+import { ElementTypeHandler } from "./element-handler";
 import type { IAgentDriver } from "../driver";
 
 export class DocumentTraverser {
@@ -37,6 +37,6 @@ export class DocumentTraverser {
 	}
 
 	traverse(element: Element) {
-		return new ElementHandler(element, this).handle();
+		return new ElementTypeHandler(this.driver, this).handle(element);
 	}
 }

@@ -1,18 +1,20 @@
 import cheerio from "cheerio";
+import type { Element } from "cheerio";
 import type { IAgentDriver } from "../agent";
+import type { DebugOpts } from "../types";
 const $ = cheerio;
 
 type Obj = Record<string, string | undefined>;
 
 export interface ITagBuilder {
-	build(): any;
+	build(element: Element): any;
 }
 
 export class TagBuilder implements ITagBuilder {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	element: any;
 
-	tagName: string;
+	tagName?: string;
 	value?: string;
 	role?: string;
 	type?: string;
@@ -25,11 +27,16 @@ export class TagBuilder implements ITagBuilder {
 	textContent?: string;
 	obj: Obj = {};
 	driver: IAgentDriver;
+	opts: DebugOpts;
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	constructor(driver: IAgentDriver, element: any) {
+	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
 		this.driver = driver;
-		this.element = element;
+		this.opts = opts;
+	}
+
+	initialize() {
+		const { element } = this;
 		this.tagName = element.name;
 		this.value = $(element).attr("value");
 		this.role = $(element).attr("role");
@@ -37,7 +44,8 @@ export class TagBuilder implements ITagBuilder {
 		this.id = $(element).attr("pgpt-id");
 	}
 
-	build() {
+	build(element: Element) {
+		this.element = element;
 		this.setTag();
 		return this.createObj();
 	}

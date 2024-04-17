@@ -131,10 +131,7 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	protected createElementSelector() {
-		if (!this.page) {
-			throw new Error("No page");
-		}
-		return new ElementSelector(this.page);
+		return new ElementSelector(this);
 	}
 
 	protected createAgentBrowser() {
