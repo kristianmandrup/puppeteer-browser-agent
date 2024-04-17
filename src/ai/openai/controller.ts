@@ -1,7 +1,8 @@
+import type { IAgentDriver } from "../../agent";
 import type { DebugOpts } from "../../types";
 import { OpenAIMessageRedacter } from "./message-redacter";
 
-export interface IOpenAIController {
+export interface IAIController {
 	getResponse(messages: any[], definitions: any[], fnCall: any): Promise<any>;
 }
 
@@ -16,12 +17,16 @@ export class OpenAIController {
 		return process.env.OPENAPI_KEY;
 	}
 
-	constructor(model: string, definitions: any[] = [], opts: DebugOpts = {}) {
-		this.model = model;
+	constructor(
+		driver: IAgentDriver,
+		definitions: any[] = [],
+		opts: DebugOpts = {},
+	) {
+		this.model = driver.model;
 		this.definitions = definitions;
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
-		this.redacter = new OpenAIMessageRedacter(this.opts);
+		this.redacter = new OpenAIMessageRedacter(driver, this.opts);
 	}
 
 	get apiEndpoint() {

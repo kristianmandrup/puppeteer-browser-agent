@@ -26,6 +26,8 @@ The `run` method should implement the core logic which takes actions and perform
 
 The driver can register actions via the method `registerAction(label: string, action: IDriverAction)` and remove actions via `removeAction(label: string)`.
 
+## Actions
+
 The library comes with a set of basic actions that can be used as starting point, to be extended or used as you find suitable. Each of these actions extends `DriverAction` and implements the `IDriverAction` interface which simply requires an async `execute` method.
 
 These actions are:
@@ -38,18 +40,62 @@ These actions are:
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
 
-A typical custom implementation would look like the following snippet, where factory methods in each custom class can be used to wire the implementation as needed.
+## Action definitions
+
+```ts
+const makePlan = {
+  name: "make_plan",
+  description:
+    "Create a plan to accomplish the given task. Summarize what the user's task is in a step by step manner. How would you browse the internet to accomplish the task. Start with 'I will'",
+  parameters: {
+    type: "object",
+    properties: {
+      plan: {
+        type: "string",
+        description:
+          "The step by step plan on how you will navigate the internet and what you will do",
+      },
+    },
+  },
+  required: ["plan"],
+};
+
+const readFile = {
+  name: "read_file",
+  description: "Read the contents of a file that the user has provided to you",
+  parameters: {
+    type: "object",
+    properties: {
+      filename: {
+        type: "string",
+        description: "The filename to read, e.g. file.txt or path/to/file.txt",
+      },
+    },
+  },
+  required: ["filename"],
+};
+
+export const definitions = [
+  makePlan,
+  readFile,
+  // more actions ...
+];
+```
+
+## Custom implementation example
+
+A custom implementation would look like the following snippet, where factory methods in each custom class can be used to wire the implementation as needed.
 
 ```ts
 export class MyAgentPlanner extends AgentPlanner {
   // override as necessary
 
   protected createDriver() {
-    this.driver = new MyAgentDriver(this.opts);
+    this.driver = new MyAgentDriver(this, this.opts);
   }
 
   protected createMessageSender() {
-    return new MyMessageSender();
+    return new MyMessageSender(this.driver);
   }
 }
 
@@ -57,11 +103,11 @@ export class MyMessageSender extends MessageSender {
   // override as necessary
 
   protected createController() {
-    return new MyAIController(this.model, definitions, this.opts);
+    return new MyAIController(this.driver, definitions, this.opts);
   }
 
   protected createTokenCostCalculator() {
-    return new MyAITokenCostCalculator(this.model, this.opts);
+    return new MyAITokenCostCalculator(this.driver, this.opts);
   }
 }
 
@@ -69,19 +115,19 @@ export class MyAgentDriver extends AgentDriver {
   // override as necessary
 
   protected createMessageBuilder() {
-    return new MyMessageBuilder();
+    return new MyMessageBuilder(this);
   }
 
   protected createPageScaper() {
-    return new MyPageScaper();
+    return new MyPageScaper(this);
   }
 
   protected createElementSelector() {
-    return new MyElementSelector(this.page);
+    return new MyElementSelector(this, this.page);
   }
 
   protected createAgentBrowser() {
-    return new MyAgentBrowser();
+    return new MyAgentBrowser(this);
   }
 }
 
@@ -92,7 +138,7 @@ export class MyAgentBrowser extends AgentBrowser {
 export class MyElementSelector extends ElementSelector {
   // override as necessary
   createPageNavigator() {
-    return new MyPageNavigator(this.page);
+    return new MyPageNavigator(this.driver, this.page);
   }
 }
 
@@ -100,7 +146,7 @@ export class MyPageNavigator extends DocumentNavigator {
   // override as necessary
 
   createElementEvaluator(element: Element, id: number, selector: string) {
-    return new MyElementEvaluator(element, id, selector);
+    return new MyElementEvaluator(this.driver, element, id, selector);
   }
 }
 
@@ -124,6 +170,15 @@ const planner = new MyAgentPlanner(context, {
 });
 
 await planner.runPlan();
+
+// create actions and register them with the driver
+const myGotoUrlAction = new MyGotoUrlAction();
+// ...
+
+planner.driver.registerAction("goto_url", myGotoUrlAction);
+
+// set action definitions
+planner.driver.setDefinitions(definitions);
 ```
 
 ## Contribute

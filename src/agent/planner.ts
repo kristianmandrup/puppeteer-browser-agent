@@ -48,7 +48,7 @@ export class AgentPlanner implements IAgentPlanner {
 	assignedMsg?: AssignedMsg;
 	promptMessage?: string;
 	promptText?: string;
-	driver?: IAgentDriver;
+	driver: IAgentDriver;
 	debug: boolean;
 	msg = {};
 	acceptPlan?: string;
@@ -63,7 +63,12 @@ export class AgentPlanner implements IAgentPlanner {
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
 		this.model = opts.model || "gpt-3.5";
-		this.createMessageSender();
+		this.messageSender = this.createMessageSender();
+		this.driver = this.createDriver();
+	}
+
+	setDefinitions(definitions: any[]) {
+		this.driver.setDefinitions(definitions);
 	}
 
 	public async runPlan() {
@@ -80,7 +85,7 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected createMessageSender() {
-		this.messageSender = new MessageSender(this.model, this.opts);
+		return new MessageSender(this.driver, this.opts);
 	}
 
 	protected createInitialContext() {
@@ -103,7 +108,6 @@ export class AgentPlanner implements IAgentPlanner {
 			await this.runPlan();
 		}
 
-		await this.createDriver();
 		await this.startDriver();
 		await this.driver?.run(this.context, this.response);
 
@@ -111,7 +115,7 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected createDriver() {
-		this.driver = new AgentDriver(this.opts);
+		return new AgentDriver(this.opts);
 	}
 
 	protected async startDriver() {

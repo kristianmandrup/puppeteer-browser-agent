@@ -1,10 +1,13 @@
 import type { Page } from "puppeteer";
 import { ElementEvaluator } from "./evaluator.js";
+import type { IAgentDriver } from "../agent/index.js";
 
-export class PageNavigator {
+export class ElementHandler {
+	driver: IAgentDriver;
 	page: Page;
 
-	constructor(page: Page) {
+	constructor(driver: IAgentDriver, page: Page) {
+		this.driver = driver;
 		this.page = page;
 	}
 
@@ -16,7 +19,7 @@ export class PageNavigator {
 	};
 
 	createElementEvaluator(element: Element, id: number, selector: string) {
-		return new ElementEvaluator(element, id, selector);
+		return new ElementEvaluator(this.driver, element, id, selector);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>

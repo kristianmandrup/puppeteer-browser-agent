@@ -1,4 +1,4 @@
 export * from "./evaluator";
-export * from "./navigator";
+export * from "./handler";
 export * from "./selector";
 export * from "./tag-builder";

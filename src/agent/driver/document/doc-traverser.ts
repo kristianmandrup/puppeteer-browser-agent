@@ -1,23 +1,27 @@
 import type { Element, CheerioAPI } from "cheerio";
-import { HtmlFormatter } from "./html-formatter";
+import { HtmlFormatter, type IHtmlFormatter } from "./html-formatter";
 import { ElementHandler } from "./element-handler";
+import type { IAgentDriver } from "../driver";
 
 export class DocumentTraverser {
 	html: string;
 	$: CheerioAPI;
+	driver: IAgentDriver;
+	formatter: IHtmlFormatter;
 
-	constructor(html: string) {
+	constructor(driver: IAgentDriver, html: string) {
+		this.driver = driver;
 		this.html = html;
+		this.formatter = this.createFormatter();
 		this.$ = this.formatHtml(`<body>${html}</body>`);
 	}
 
 	formatHtml(bodyHtml: string) {
-		const formatter = this.createFormatter(bodyHtml);
-		return formatter.format();
+		return this.formatter.format(bodyHtml);
 	}
 
-	createFormatter(html: string) {
-		return new HtmlFormatter(html);
+	createFormatter() {
+		return new HtmlFormatter(this.driver);
 	}
 
 	execute() {

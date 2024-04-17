@@ -1,14 +1,21 @@
 import fs from "node:fs";
 import type { DebugOpts } from "../../types";
-export class OpenAIMessageRedacter {
+import type { IAgentDriver } from "../../agent";
+
+export interface AIMessageRedacter {
+	redactMessages(messages: any[]): string[];
+}
+export class OpenAIMessageRedacter implements AIMessageRedacter {
 	currentUrl = "";
 	debug: boolean;
+	driver: IAgentDriver;
 
-	constructor(opts: DebugOpts) {
+	constructor(driver: IAgentDriver, opts: DebugOpts) {
+		this.driver = driver;
 		this.debug = Boolean(opts.debug);
 	}
 
-	redactMessages(messages: any[]) {
+	public redactMessages(messages: any[]) {
 		this.currentUrl = messages[messages.length - 1].url;
 
 		const redactMessage = this.redactMessage.bind(this);

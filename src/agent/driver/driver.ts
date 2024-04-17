@@ -1,7 +1,7 @@
+import fs from "node:fs";
 import type { HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser, type IAgentBrowser } from "../browser.js";
-import fs from "node:fs";
-import type { DebugOpts } from "../../types.js";
+import { definitions } from "./definitions";
 import {
 	ElementSelector,
 	type IElementSelector,
@@ -12,6 +12,7 @@ import {
 	type IMessageBuilder,
 	MessageBuilder,
 } from "./message/message-builder.js";
+import type { DebugOpts } from "../../types.js";
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type Context = any[];
 export type StructuredMsg = {
@@ -20,7 +21,9 @@ export type StructuredMsg = {
 };
 
 export type FnArgs = Record<string, any>;
-export type DriverOpts = DebugOpts;
+export type DriverOpts = DebugOpts & {
+	definitions?: any[];
+};
 
 export interface IAgentDriver {
 	registerAction(label: string, action: IDriverAction): void;
@@ -43,6 +46,10 @@ export interface IAgentDriver {
 	elementSelector: IElementSelector;
 	autopilot: boolean;
 	browser: IAgentBrowser;
+	model: string;
+	definitions: any[];
+	setDefinitions(definitions: any[]): void;
+	addDefinitions(definitions: any[]): void;
 }
 
 export class AgentDriver implements IAgentDriver {
@@ -56,6 +63,7 @@ export class AgentDriver implements IAgentDriver {
 	fnName = "";
 	fnArgs: FnArgs = {};
 	autopilot = false;
+	model = "gpt-3.5";
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	aiMsg?: any;
 	debug = false;
@@ -67,6 +75,7 @@ export class AgentDriver implements IAgentDriver {
 
 	actions: Record<string, IDriverAction> = {};
 	pageScraper: IPageScraper;
+	definitions: any[];
 
 	constructor(opts: DriverOpts = {}) {
 		this.debug = Boolean(opts.debug);
@@ -74,9 +83,30 @@ export class AgentDriver implements IAgentDriver {
 		if (!this.page) {
 			throw new Error("No page");
 		}
+		this.definitions = opts.definitions || this.defaultDefinitions();
 		this.elementSelector = this.createElementSelector();
 		this.pageScraper = this.createPageScraper();
 		this.messageBuilder = this.createMessageBuilder();
+	}
+
+	setDefinitions(definitions: any[]) {
+		this.definitions = definitions;
+	}
+
+	addDefinition(definition: any) {
+		if (Array.isArray(definition)) {
+			this.addDefinitions(definition);
+			return;
+		}
+		this.addDefinitions([definition]);
+	}
+
+	addDefinitions(definitions: any[]) {
+		this.definitions.push(...definitions);
+	}
+
+	defaultDefinitions() {
+		return definitions;
 	}
 
 	protected createMessageBuilder() {
@@ -91,7 +121,7 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	protected createAgentBrowser() {
-		return new AgentBrowser();
+		return new AgentBrowser(this);
 	}
 
 	public registerAction(label: string, action: IDriverAction) {
@@ -259,7 +289,7 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	protected createPageScraper() {
-		return new PageScraper();
+		return new PageScraper(this);
 	}
 
 	protected log(msg: any) {

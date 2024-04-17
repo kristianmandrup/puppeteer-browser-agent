@@ -1,6 +1,6 @@
 import type { ElementHandle } from "puppeteer";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
-import { DocumentNavigator, type IDocumentNavigator } from "../document";
+import { PageNavigator, type IPageNavigator } from "../document";
 import type { FnArgs, IAgentDriver } from "../driver";
 import type { DebugOpts } from "../../../types";
 
@@ -13,7 +13,7 @@ export class SubmitFormAction
 	formData: any;
 	prevInput: any;
 	linksAndInputs: any;
-	navigator: IDocumentNavigator;
+	navigator: IPageNavigator;
 
 	constructor(
 		driver: IAgentDriver,
@@ -27,7 +27,7 @@ export class SubmitFormAction
 	}
 
 	protected createNavigator() {
-		return new DocumentNavigator();
+		return new PageNavigator(this.driver, this.opts);
 	}
 
 	async selectElement(elementSelector: string) {

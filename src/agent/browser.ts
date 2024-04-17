@@ -7,6 +7,7 @@ import type {
 	Frame,
 	Browser,
 } from "puppeteer";
+import type { IAgentDriver } from "./driver";
 
 type PageHeaders = Record<string, string>;
 
@@ -39,8 +40,10 @@ export class AgentBrowser implements IAgentBrowser {
 	requests = 0;
 	view: ViewportOpts = {};
 	browser?: Browser;
+	driver: IAgentDriver;
 
-	constructor(opts: BrowserOpts = {}) {
+	constructor(driver: IAgentDriver, opts: BrowserOpts = {}) {
+		this.driver = driver;
 		this.debug = Boolean(opts.debug);
 		this.headless = Boolean(opts.headless);
 		this.view = opts.viewport || {};

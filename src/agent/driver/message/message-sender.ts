@@ -1,15 +1,15 @@
 import type { DebugOpts } from "../../../types";
 import fs from "node:fs";
-import { definitions } from "./definitions";
 import {
-	type IOpenAITokenCostCalculator,
+	type IOpenAITokenCostCalculator as IAITokenCostCalculator,
 	OpenAITokenCostCalculator,
 } from "../../../ai/openai/token-cost-calculator";
 import type { ActionConfig } from "../../planner";
 import {
-	type IOpenAIController,
+	type IAIController,
 	OpenAIController,
 } from "../../../ai/openai/controller";
+import type { IAgentDriver } from "../driver";
 
 type AiResponseData = {
 	choices: any[];
@@ -36,6 +36,8 @@ export interface IMessageSender {
 	): Promise<unknown>;
 }
 
+export type MessageSenderOpts = DebugOpts;
+
 export class MessageSender implements IMessageSender {
 	debug: boolean;
 	messages: unknown[] = [];
@@ -48,16 +50,22 @@ export class MessageSender implements IMessageSender {
 	autopilot = true;
 	opts: DebugOpts = {};
 	model = "gpt-3.5";
-	calculator?: IOpenAITokenCostCalculator;
+	calculator?: IAITokenCostCalculator;
 	actions: any[] = [];
-	controller?: IOpenAIController;
+	controller?: IAIController;
+	driver: IAgentDriver;
 
-	constructor(model: string, opts: DebugOpts = {}) {
+	constructor(driver: IAgentDriver, opts: MessageSenderOpts = {}) {
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
-		this.model = model || this.model;
+		this.driver = driver;
+		this.model = driver.model || this.model;
 		this.calculator = this.createTokenCostCalculator();
 		this.controller = this.createController();
+	}
+
+	get definitions() {
+		return this.driver.definitions;
 	}
 
 	public async sendMessageToController(
@@ -73,7 +81,7 @@ export class MessageSender implements IMessageSender {
 
 		const filteredDefinitions = this.filterDefinitions(
 			this.actions,
-			definitions,
+			this.definitions,
 		);
 
 		// TODO: ??
@@ -93,11 +101,11 @@ export class MessageSender implements IMessageSender {
 	}
 
 	protected createController() {
-		return new OpenAIController(this.model, definitions, this.opts);
+		return new OpenAIController(this.driver, this.definitions, this.opts);
 	}
 
 	protected createTokenCostCalculator() {
-		return new OpenAITokenCostCalculator(this.model, this.opts);
+		return new OpenAITokenCostCalculator(this.driver, this.opts);
 	}
 
 	protected logMessageContext(messages: unknown) {

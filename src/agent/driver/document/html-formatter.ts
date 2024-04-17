@@ -1,5 +1,6 @@
 import cheerio, { type CheerioAPI } from "cheerio";
 import type { DebugOpts } from "../../../types";
+import type { IAgentDriver } from "../driver";
 
 export interface IHtmlFormatter {
 	format(html: string): CheerioAPI;
@@ -9,8 +10,10 @@ export class HtmlFormatter implements IHtmlFormatter {
 	html?: string;
 	$?: CheerioAPI;
 	debug: boolean;
+	driver: IAgentDriver;
 
-	constructor(opts: DebugOpts = {}) {
+	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
+		this.driver = driver;
 		this.debug = Boolean(opts.debug);
 	}
 

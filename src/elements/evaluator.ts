@@ -1,9 +1,9 @@
+import type { IAgentDriver } from "../agent";
+
 export class ElementEvaluator {
 	element: Element;
 	id: number;
 	selector: string;
-	obj = 1;
-
 	role: string | null = "null";
 	placeholder?: string;
 	textContent?: string;
@@ -11,8 +11,15 @@ export class ElementEvaluator {
 	value?: string;
 	href?: string;
 	title?: string;
+	driver: IAgentDriver;
 
-	constructor(element: Element, id: number, selector: string) {
+	constructor(
+		driver: IAgentDriver,
+		element: Element,
+		id: number,
+		selector: string,
+	) {
+		this.driver = driver;
 		this.element = element;
 		this.id = id;
 		this.selector = selector;

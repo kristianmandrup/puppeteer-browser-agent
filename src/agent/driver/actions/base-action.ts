@@ -4,6 +4,11 @@ import type { DebugOpts } from "../../../types";
 export interface IDriverAction {
 	execute(): Promise<void>;
 }
+
+export type IDriverActionOpts = DebugOpts & {
+	definition?: any;
+};
+
 export abstract class BaseDriverAction implements IDriverAction {
 	driver: IAgentDriver;
 	fnArgs: FnArgs = {};
@@ -11,18 +16,22 @@ export abstract class BaseDriverAction implements IDriverAction {
 	debug = false;
 	taskPrefix?: string;
 	message?: string;
+	definition: any;
+	opts: IDriverActionOpts;
 
 	constructor(
 		driver: IAgentDriver,
 		fnArgs: FnArgs,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		context: any[],
-		opts: DebugOpts = {},
+		opts: IDriverActionOpts = {},
 	) {
 		this.driver = driver;
+		this.opts = opts;
 		this.fnArgs = fnArgs;
 		this.context = context;
 		this.debug = Boolean(opts.debug);
+		this.definition = opts.definition;
 	}
 
 	setMessage(message: string) {

@@ -1,7 +1,7 @@
 import { TimeoutError, type Page } from "puppeteer";
 import type { Context, FnArgs, IAgentDriver } from "../driver";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
-import { DocumentNavigator, type IDocumentNavigator } from "../document";
+import { PageNavigator, type IPageNavigator } from "../document";
 
 export interface IClickLinkAction extends IDriverAction {}
 
@@ -21,7 +21,7 @@ export class ClickLinkAction
 	requestCount = 0;
 	responseCount = 0;
 	downloadStarted = false;
-	navigator: IDocumentNavigator;
+	navigator: IPageNavigator;
 
 	constructor(
 		driver: IAgentDriver,
@@ -38,7 +38,7 @@ export class ClickLinkAction
 	}
 
 	protected createNavigator() {
-		return new DocumentNavigator();
+		return new PageNavigator(this.driver);
 	}
 
 	protected get elementSelector() {

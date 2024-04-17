@@ -1,3 +1,4 @@
+import type { IAgentDriver } from "../../agent";
 import type { DebugOpts } from "../../types";
 
 export interface IOpenAITokenCostCalculator {
@@ -10,11 +11,13 @@ export class OpenAITokenCostCalculator {
 		totalTokens: 0,
 	};
 
-	model?: string;
+	driver: IAgentDriver;
+	model: string;
 	debug = false;
 
-	constructor(model: string, opts: DebugOpts = {}) {
-		this.model = model;
+	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
+		this.driver = driver;
+		this.model = driver.model;
 		this.debug = Boolean(opts.debug);
 	}
 

@@ -1,12 +1,35 @@
 import type { Page, PuppeteerLifeCycleEvent } from "puppeteer";
+import type { IAgentDriver } from "../driver";
+import type { DebugOpts } from "../../../types";
 
-export interface IDocumentNavigator {
+export interface IPageNavigator {
 	waitForNavigation(page: Page): Promise<void>;
 }
 
-export class DocumentNavigator implements IDocumentNavigator {
+export type PageNavigatorOpts = DebugOpts & {
+	navigationTimeout?: number;
+};
+
+export class PageNavigator implements IPageNavigator {
 	navigationTimeout = 6000;
 	waitUntil: PuppeteerLifeCycleEvent = "load"; // puppeteer lifecycle event
+	debug: boolean;
+	driver: IAgentDriver;
+	opts: PageNavigatorOpts;
+
+	constructor(driver: IAgentDriver, opts: PageNavigatorOpts = {}) {
+		this.driver = driver;
+		this.opts = opts;
+		this.navigationTimeout =
+			opts.navigationTimeout || this.defaults.navigationTimeout;
+		this.debug = Boolean(opts.debug);
+	}
+
+	get defaults() {
+		return {
+			navigationTimeout: 6000,
+		};
+	}
 
 	async waitForNavigation(page: Page) {
 		try {
