@@ -13,32 +13,19 @@ export interface IElementSelector {
 
 export class ElementSelector implements IElementSelector {
 	page?: Page;
-	navigator: InteractiveElementHandler;
+	interactiveElementHandler: InteractiveElementHandler;
 	skipped: ElementHandle<Element>[] = [];
 	selected: ElementHandle<Element>[] = [];
-	debug?: boolean;
+	debug: boolean;
 	driver: IAgentDriver;
 
 	constructor(driver: IAgentDriver, opts: SelectorOpts = {}) {
 		this.driver = driver;
-		this.navigator = this.createPageNavigator();
-		this.debug = opts.debug;
+		this.debug = Boolean(opts.debug);
+		this.interactiveElementHandler = this.createInteractiveElementHandler();
 	}
 
-	createPageNavigator() {
-		return new InteractiveElementHandler(this.driver);
-	}
-
-	get elementSelector() {
-		return 'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), select:not([disabled]), a[href]:not([href="javascript:void(0)"]):not([href="#"])';
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	async getNext(element: any, id: number, selector: string) {
-		return await this.navigator.nextInteractiveElement(element, id, selector);
-	}
-
-	async getElements(page: Page, selector = "*") {
+	public async getElements(page: Page, selector = "*") {
 		let id = 0;
 
 		const elements: ElementHandle<Element>[] = await page
@@ -64,22 +51,42 @@ export class ElementSelector implements IElementSelector {
 		return elements;
 	}
 
-	skipElement(element: ElementHandle<Element>) {
+	protected createInteractiveElementHandler() {
+		return new InteractiveElementHandler(this.driver);
+	}
+
+	protected get elementSelector() {
+		return 'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), select:not([disabled]), a[href]:not([href="javascript:void(0)"]):not([href="#"])';
+	}
+
+	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	protected async getNext(element: any, id: number, selector: string) {
+		return await this.interactiveElementHandler.nextInteractiveElement(
+			element,
+			id,
+			selector,
+		);
+	}
+
+	protected skipElement(element: ElementHandle<Element>) {
 		this.skipped.push(element);
 	}
 
-	selectElement(element: ElementHandle<Element>) {
+	protected selectElement(element: ElementHandle<Element>) {
 		this.selected.push(element);
 	}
 
-	writeElements(fileName: string, elements: ElementHandle<Element>[]) {
+	protected writeElements(
+		fileName: string,
+		elements: ElementHandle<Element>[],
+	) {
 		if (!this.debug) {
 			return;
 		}
 		fs.writeFileSync(fileName, JSON.stringify(elements, null, 2));
 	}
 
-	logElements() {
+	protected logElements() {
 		this.writeElements("skipped.json", this.skipped);
 		this.writeElements("selected.json", this.selected);
 	}

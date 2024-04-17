@@ -142,7 +142,7 @@ export class MyAgentBrowser extends AgentBrowser {
 
 export class MyElementSelector extends ElementSelector {
   // override as necessary
-  createPageNavigator() {
+  protected createPageNavigator() {
     return new MyPageNavigator(this.driver);
   }
 }
@@ -150,7 +150,11 @@ export class MyElementSelector extends ElementSelector {
 export class MyPageNavigator extends DocumentNavigator {
   // override as necessary
 
-  createElementEvaluator(element: Element, id: number, selector: string) {
+  protected createElementEvaluator(
+    element: Element,
+    id: number,
+    selector: string
+  ) {
     return new MyElementEvaluator(this.driver, element, id, selector);
   }
 }
@@ -158,9 +162,45 @@ export class MyPageNavigator extends DocumentNavigator {
 export class MyPageScraper extends PageScraper {
   // override as necessary
 
-  createHtmlFormatter() {
-    return new MyHtmlFormatter(this.driver);
+  protected createDocumentTraverser() {
+    return new DocumentTraverser(this.driver, this.opts);
   }
+}
+
+export class MyDocumentTraverser extends DocumentTraverser {
+  // override as necessary
+
+  protected createFormatter() {
+    return new HtmlFormatter(this.driver);
+  }
+
+  protected createElementTypeHandler() {
+    return new ElementTypeHandler(this.driver, this);
+  }
+}
+
+export class MyHtmlFormatter extends HtmlFormatter {
+  // override as necessary
+}
+
+export class MyElementTypeHandler extends ElementTypeHandler {
+  // override as necessary
+
+  protected createTagBuilder() {
+    return new TagBuilder(this.driver);
+  }
+}
+
+export class MyElementSelector extends ElementSelector {
+  // override as necessary
+
+  protected createInteractiveElementHandler() {
+    return new InteractiveElementHandler(this.driver);
+  }
+}
+
+export class MyMessageBuilder extends MessageBuilder {
+  // override as necessary
 }
 
 // And so on...

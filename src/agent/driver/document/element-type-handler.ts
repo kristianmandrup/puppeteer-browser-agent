@@ -8,7 +8,7 @@ import type { IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 
 export interface IElementTypeHandler {
-	handle(element: Element): void;
+	handle(element: Element): string;
 }
 
 export class ElementTypeHandler implements IElementTypeHandler {
@@ -32,7 +32,7 @@ export class ElementTypeHandler implements IElementTypeHandler {
 		this.tagBuilder = this.createTagBuilder();
 	}
 
-	public handle(element: Element) {
+	public handle(element: Element): string {
 		this.element = element;
 		this.handleMisc();
 		this.handleHeaderElement();

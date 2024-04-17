@@ -1,6 +1,9 @@
 import { type Element, type CheerioAPI, load } from "cheerio";
 import { HtmlFormatter, type IHtmlFormatter } from "./html-formatter";
-import { ElementTypeHandler } from "./element-handler";
+import {
+	ElementTypeHandler,
+	type IElementTypeHandler,
+} from "./element-type-handler";
 import type { IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 
@@ -17,12 +20,18 @@ export class DocumentTraverser implements IDocumentTraverser {
 	formatter: IHtmlFormatter;
 	debug: boolean;
 	opts: DebugOpts;
+	elementTypeHandler: IElementTypeHandler;
 
 	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
 		this.driver = driver;
 		this.opts = opts;
 		this.debug = Boolean(opts.debug);
 		this.formatter = this.createFormatter();
+		this.elementTypeHandler = this.createElementTypeHandler();
+	}
+
+	createElementTypeHandler() {
+		return new ElementTypeHandler(this.driver, this);
 	}
 
 	formatHtml(bodyHtml: string) {
@@ -53,6 +62,6 @@ export class DocumentTraverser implements IDocumentTraverser {
 	}
 
 	traverse(element: Element) {
-		return new ElementTypeHandler(this.driver, this).handle(element);
+		return this.elementTypeHandler.handle(element);
 	}
 }

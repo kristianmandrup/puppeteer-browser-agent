@@ -2,24 +2,30 @@ import type { Page } from "puppeteer";
 import { HtmlFormatter, type IHtmlFormatter } from "./html-formatter";
 import type { DebugOpts } from "../../../types";
 import type { IAgentDriver } from "../agent-driver";
+import {
+	DocumentTraverser,
+	type IDocumentTraverser,
+} from "./document-traverser";
 
 export interface IPageScraper {
 	getPageContent(page: Page): Promise<string>;
 }
 
 export class PageScraper implements IPageScraper {
-	htmlFormatter: IHtmlFormatter;
 	debug: boolean;
+	opts: DebugOpts;
 	driver: IAgentDriver;
+	documentTraverser: IDocumentTraverser;
 
 	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
 		this.driver = driver;
+		this.opts = opts;
 		this.debug = Boolean(opts.debug);
-		this.htmlFormatter = this.createHtmlFormatter();
+		this.documentTraverser = this.createDocumentTraverser();
 	}
 
-	createHtmlFormatter() {
-		return new HtmlFormatter(this.driver);
+	createDocumentTraverser() {
+		return new DocumentTraverser(this.driver, this.opts);
 	}
 
 	async getPageContent(page: Page) {
@@ -36,8 +42,7 @@ export class PageScraper implements IPageScraper {
 		return `## START OF PAGE CONTENT ##\nTitle: ${title}\n\n${formattedHtml}\n## END OF PAGE CONTENT ##`;
 	}
 
-	// TODO: // use formatter
 	formatHtml(html: string) {
-		return this.htmlFormatter.format(html);
+		return this.documentTraverser.start(html);
 	}
 }
