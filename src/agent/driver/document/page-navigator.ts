@@ -1,5 +1,5 @@
 import type { Page, PuppeteerLifeCycleEvent } from "puppeteer";
-import type { IAgentDriver } from "../driver";
+import type { IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 
 export interface IPageNavigator {
@@ -19,9 +19,9 @@ export class PageNavigator implements IPageNavigator {
 
 	constructor(driver: IAgentDriver, opts: PageNavigatorOpts = {}) {
 		this.driver = driver;
-		this.opts = opts;
 		this.navigationTimeout =
 			opts.navigationTimeout || this.defaults.navigationTimeout;
+		this.opts = opts;
 		this.debug = Boolean(opts.debug);
 	}
 

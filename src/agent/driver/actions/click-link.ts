@@ -1,5 +1,5 @@
 import { TimeoutError, type Page } from "puppeteer";
-import type { Context, FnArgs, IAgentDriver } from "../driver";
+import type { Context, FnArgs, IAgentDriver } from "../agent-driver";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
 

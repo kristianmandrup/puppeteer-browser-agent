@@ -1,7 +1,7 @@
 import type { Page } from "puppeteer";
 import { HtmlFormatter, type IHtmlFormatter } from "./html-formatter";
 import type { DebugOpts } from "../../../types";
-import type { IAgentDriver } from "../driver";
+import type { IAgentDriver } from "../agent-driver";
 
 export interface IPageScraper {
 	getPageContent(page: Page): Promise<string>;

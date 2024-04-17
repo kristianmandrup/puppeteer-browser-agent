@@ -1,7 +1,7 @@
 import type { ElementHandle } from "puppeteer";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
-import type { FnArgs, IAgentDriver } from "../driver";
+import type { FnArgs, IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 
 export interface ISumbitFormAction extends IDriverAction {}

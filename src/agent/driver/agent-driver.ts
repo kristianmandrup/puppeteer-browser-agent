@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import type { HTTPResponse, Page } from "puppeteer";
-import { AgentBrowser, type IAgentBrowser } from "../browser.js";
-import { definitions } from "./definitions";
+import { AgentBrowser, type IAgentBrowser } from "../agent-browser.js";
+import { definitions } from "./definitions.js";
 import {
 	ElementSelector,
 	type IElementSelector,
-} from "../../elements/selector.js";
+} from "../../elements/element-selector.js";
 import type { IDriverAction } from "./actions/base-action.js";
 import { type IPageScraper, PageScraper } from "./document/page-scraper.js";
 import {

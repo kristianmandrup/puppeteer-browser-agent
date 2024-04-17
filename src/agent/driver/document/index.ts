@@ -1,5 +1,5 @@
-export * from "./doc-traverser";
+export * from "./document-traverser";
 export * from "./element-handler";
 export * from "./html-formatter";
-export * from "./navigator";
+export * from "./page-navigator";
 export * from "./page-scraper";

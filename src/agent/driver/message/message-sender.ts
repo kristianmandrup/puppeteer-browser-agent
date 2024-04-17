@@ -4,12 +4,12 @@ import {
 	type IOpenAITokenCostCalculator as IAITokenCostCalculator,
 	OpenAITokenCostCalculator,
 } from "../../../ai/openai/token-cost-calculator";
-import type { ActionConfig } from "../../planner";
+import type { ActionConfig } from "../../agent-planner";
 import {
 	type IAIController,
 	OpenAIController,
 } from "../../../ai/openai/controller";
-import type { IAgentDriver } from "../driver";
+import type { IAgentDriver } from "../agent-driver";
 
 type AiResponseData = {
 	choices: any[];

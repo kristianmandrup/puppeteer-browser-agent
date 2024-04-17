@@ -1,14 +1,21 @@
 import type { Page } from "puppeteer";
-import { ElementEvaluator } from "./evaluator.js";
+import { ElementEvaluator } from "./element-evaluator.js";
 import type { IAgentDriver } from "../agent/index.js";
+import type { DebugOpts } from "../types.js";
 
 export class InteractiveElementHandler {
 	driver: IAgentDriver;
-	page?: Page;
+	debug: boolean;
+	opts: DebugOpts;
 
-	constructor(driver: IAgentDriver, page?: Page) {
+	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
 		this.driver = driver;
-		this.page = page;
+		this.debug = Boolean(opts.debug);
+		this.opts = opts;
+	}
+
+	get page(): Page | undefined {
+		return this.driver.page;
 	}
 
 	// string, ...args: Params

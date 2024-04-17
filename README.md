@@ -143,7 +143,7 @@ export class MyAgentBrowser extends AgentBrowser {
 export class MyElementSelector extends ElementSelector {
   // override as necessary
   createPageNavigator() {
-    return new MyPageNavigator(this.driver, this.page);
+    return new MyPageNavigator(this.driver);
   }
 }
 

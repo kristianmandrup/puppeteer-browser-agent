@@ -1,6 +1,6 @@
 import cheerio, { type CheerioAPI } from "cheerio";
 import type { DebugOpts } from "../../../types";
-import type { IAgentDriver } from "../driver";
+import type { IAgentDriver } from "../agent-driver";
 
 export interface IHtmlFormatter {
 	format(html: string): CheerioAPI;

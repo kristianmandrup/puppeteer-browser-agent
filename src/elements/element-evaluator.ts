@@ -1,4 +1,5 @@
 import type { IAgentDriver } from "../agent";
+import type { DebugOpts } from "../types";
 
 export class ElementEvaluator {
 	element: Element;
@@ -12,17 +13,22 @@ export class ElementEvaluator {
 	href?: string;
 	title?: string;
 	driver: IAgentDriver;
+	debug: boolean;
+	opts: DebugOpts;
 
 	constructor(
 		driver: IAgentDriver,
 		element: Element,
 		id: number,
 		selector: string,
+		opts: DebugOpts = {},
 	) {
 		this.driver = driver;
 		this.element = element;
 		this.id = id;
 		this.selector = selector;
+		this.debug = Boolean(opts.debug);
+		this.opts = opts;
 	}
 
 	evaluate() {

@@ -29,7 +29,6 @@ export class TagBuilder implements ITagBuilder {
 	driver: IAgentDriver;
 	opts: DebugOpts;
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
 		this.driver = driver;
 		this.opts = opts;

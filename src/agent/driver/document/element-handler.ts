@@ -1,7 +1,11 @@
 import type { Element } from "cheerio";
-import type { DocumentTraverser } from "./doc-traverser";
+import type {
+	DocumentTraverser,
+	IDocumentTraverser,
+} from "./document-traverser";
 import { type ITagBuilder, TagBuilder } from "../../../elements";
-import type { IAgentDriver } from "../driver";
+import type { IAgentDriver } from "../agent-driver";
+import type { DebugOpts } from "../../../types";
 
 export interface IElementTypeHandler {
 	handle(element: Element): void;
@@ -9,13 +13,21 @@ export interface IElementTypeHandler {
 
 export class ElementTypeHandler implements IElementTypeHandler {
 	element?: Element;
-	docTraverser: DocumentTraverser;
+	docTraverser: IDocumentTraverser;
 	output = "";
 	driver: IAgentDriver;
 	tagBuilder: ITagBuilder;
+	debug: boolean;
+	opts: DebugOpts;
 
-	constructor(driver: IAgentDriver, docTraverser: DocumentTraverser) {
+	constructor(
+		driver: IAgentDriver,
+		docTraverser: DocumentTraverser,
+		opts: DebugOpts = {},
+	) {
 		this.driver = driver;
+		this.debug = Boolean(opts.debug);
+		this.opts = opts;
 		this.docTraverser = docTraverser;
 		this.tagBuilder = this.createTagBuilder();
 	}

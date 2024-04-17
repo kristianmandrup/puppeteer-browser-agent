@@ -1,4 +1,4 @@
-import type { StructuredMsg } from "../driver";
+import type { StructuredMsg } from "../agent-driver";
 
 export interface IMessageBuilder {
 	message: StructuredMsg;

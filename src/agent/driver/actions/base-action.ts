@@ -1,4 +1,4 @@
-import type { Context, FnArgs, IAgentDriver } from "../driver";
+import type { Context, FnArgs, IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 
 export interface IDriverAction {

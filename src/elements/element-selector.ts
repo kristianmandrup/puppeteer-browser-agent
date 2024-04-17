@@ -1,6 +1,6 @@
 import type { ElementHandle, Page } from "puppeteer";
 import fs from "node:fs";
-import { InteractiveElementHandler } from "./interactive-handler.js";
+import { InteractiveElementHandler } from "./interactive-element-handler.js";
 import type { IAgentDriver } from "../agent/index.js";
 
 type SelectorOpts = {
@@ -26,7 +26,7 @@ export class ElementSelector implements IElementSelector {
 	}
 
 	createPageNavigator() {
-		return new InteractiveElementHandler(this.driver, this.page);
+		return new InteractiveElementHandler(this.driver);
 	}
 
 	get elementSelector() {
