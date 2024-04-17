@@ -1,10 +1,24 @@
 import type { Page } from "puppeteer";
+import { HtmlFormatter, type IHtmlFormatter } from "./html-formatter";
+import type { DebugOpts } from "../../../types";
 
 export interface IPageScraper {
 	getPageContent(page: Page): Promise<string>;
 }
 
 export class PageScraper implements IPageScraper {
+	htmlFormatter: IHtmlFormatter;
+	debug: boolean;
+
+	constructor(opts: DebugOpts = {}) {
+		this.debug = Boolean(opts.debug);
+		this.htmlFormatter = this.createHtmlFormatter();
+	}
+
+	createHtmlFormatter() {
+		return new HtmlFormatter();
+	}
+
 	async getPageContent(page: Page) {
 		const title = await page.evaluate(() => {
 			return document.title;
@@ -21,6 +35,6 @@ export class PageScraper implements IPageScraper {
 
 	// TODO: // use formatter
 	formatHtml(html: string) {
-		return html;
+		return this.htmlFormatter.format(html);
 	}
 }

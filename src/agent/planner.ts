@@ -1,6 +1,6 @@
 import type { HTTPResponse } from "puppeteer";
 import fs from "node:fs";
-import { AgentDriver } from "./driver/driver";
+import { AgentDriver, type IAgentDriver } from "./driver/driver";
 import type { DebugOpts } from "../types";
 import {
 	type IMessageSender,
@@ -48,7 +48,7 @@ export class AgentPlanner implements IAgentPlanner {
 	assignedMsg?: AssignedMsg;
 	promptMessage?: string;
 	promptText?: string;
-	driver?: AgentDriver;
+	driver?: IAgentDriver;
 	debug: boolean;
 	msg = {};
 	acceptPlan?: string;
@@ -57,7 +57,7 @@ export class AgentPlanner implements IAgentPlanner {
 	model: string;
 	opts: PlannerOpts;
 
-	constructor(context: unknown[], opts: PlannerOpts = {}) {
+	constructor(context: any, opts: PlannerOpts = {}) {
 		this.context = context || this.createInitialContext();
 		this.opts = opts;
 		this.debug = Boolean(opts.debug);

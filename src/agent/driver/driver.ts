@@ -1,5 +1,5 @@
 import type { HTTPResponse, Page } from "puppeteer";
-import { AgentBrowser } from "../browser.js";
+import { AgentBrowser, type IAgentBrowser } from "../browser.js";
 import fs from "node:fs";
 import type { DebugOpts } from "../../types.js";
 import {
@@ -7,8 +7,11 @@ import {
 	type IElementSelector,
 } from "../../elements/selector.js";
 import type { IDriverAction } from "./actions/base-action.js";
-import { PageScraper } from "./document/page-scraper.js";
-import { MessageBuilder } from "./message/message-builder.js";
+import { type IPageScraper, PageScraper } from "./document/page-scraper.js";
+import {
+	type IMessageBuilder,
+	MessageBuilder,
+} from "./message/message-builder.js";
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type Context = any[];
 export type StructuredMsg = {
@@ -39,6 +42,7 @@ export interface IAgentDriver {
 	page?: Page;
 	elementSelector: IElementSelector;
 	autopilot: boolean;
+	browser: IAgentBrowser;
 }
 
 export class AgentDriver implements IAgentDriver {
@@ -59,9 +63,10 @@ export class AgentDriver implements IAgentDriver {
 
 	context?: string[] = [];
 	elementSelector: IElementSelector;
-	messageBuilder: MessageBuilder = new MessageBuilder();
+	messageBuilder: IMessageBuilder;
 
 	actions: Record<string, IDriverAction> = {};
+	pageScraper: IPageScraper;
 
 	constructor(opts: DriverOpts = {}) {
 		this.debug = Boolean(opts.debug);
@@ -70,6 +75,12 @@ export class AgentDriver implements IAgentDriver {
 			throw new Error("No page");
 		}
 		this.elementSelector = this.createElementSelector();
+		this.pageScraper = this.createPageScraper();
+		this.messageBuilder = this.createMessageBuilder();
+	}
+
+	protected createMessageBuilder() {
+		return new MessageBuilder();
 	}
 
 	protected createElementSelector() {
@@ -247,6 +258,10 @@ export class AgentDriver implements IAgentDriver {
 		await this.doStep(context, nextStep, linksAndInputs, element);
 	}
 
+	protected createPageScraper() {
+		return new PageScraper();
+	}
+
 	protected log(msg: any) {
 		if (!this.debug) {
 			return;
@@ -263,10 +278,6 @@ export class AgentDriver implements IAgentDriver {
 
 	hasContent() {
 		return !this.noContent;
-	}
-
-	get pageScraper() {
-		return new PageScraper();
 	}
 
 	async getPageContent() {

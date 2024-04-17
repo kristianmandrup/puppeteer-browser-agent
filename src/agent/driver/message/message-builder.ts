@@ -1,7 +1,8 @@
 import type { StructuredMsg } from "../driver";
 
 export interface IMessageBuilder {
-	setContent(content: string): void;
+	message: StructuredMsg;
+	setContent(content?: string): void;
 	addContent(content: string): void;
 	setUrl(url: string): void;
 }

@@ -1,6 +1,10 @@
 import type { DebugOpts } from "../../types";
 import { OpenAIMessageRedacter } from "./message-redacter";
 
+export interface IOpenAIController {
+	getResponse(messages: any[], definitions: any[], fnCall: any): Promise<any>;
+}
+
 export class OpenAIController {
 	definitions: any[] = [];
 	debug: boolean;
@@ -28,7 +32,11 @@ export class OpenAIController {
 		this.redacter.redactMessages(messages);
 	}
 
-	async getResponse(messages: any[], definitions: any[], fnCall = "auto") {
+	public async getResponse(
+		messages: any[],
+		definitions: any[],
+		fnCall = "auto",
+	) {
 		const response = await fetch(this.apiEndpoint, {
 			method: "POST",
 			headers: {

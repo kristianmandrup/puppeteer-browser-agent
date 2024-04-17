@@ -1,5 +1,8 @@
 import type { DebugOpts } from "../../types";
 
+export interface IOpenAITokenCostCalculator {
+	tokenCost(promptTokens: number, completionTokens: number): number;
+}
 export class OpenAITokenCostCalculator {
 	tokenUsage = {
 		promptTokens: 0,
@@ -15,7 +18,18 @@ export class OpenAITokenCostCalculator {
 		this.debug = Boolean(opts.debug);
 	}
 
-	getTokenPrice(model: string, direction: string) {
+	public tokenCost(promptTokens: number, completionTokens: number) {
+		const { model } = this;
+		if (!model) {
+			throw new Error("Invalid or missing model");
+		}
+		const promptPrice = this.getTokenPrice(model, "input");
+		const completionPrice = this.getTokenPrice(model, "output");
+
+		return promptTokens * promptPrice + completionTokens * completionPrice;
+	}
+
+	protected getTokenPrice(model: string, direction: string) {
 		let tokenPriceInput = 0.0;
 		let tokenPriceOutput = 0.0;
 
@@ -39,23 +53,12 @@ export class OpenAITokenCostCalculator {
 		return tokenPriceOutput;
 	}
 
-	tokenCost(promptTokens: number, completionTokens: number) {
-		const { model } = this;
-		if (!model) {
-			throw new Error("Invalid or missing model");
-		}
-		const promptPrice = this.getTokenPrice(model, "input");
-		const completionPrice = this.getTokenPrice(model, "output");
-
-		return promptTokens * promptPrice + completionTokens * completionPrice;
-	}
-
-	round(num: number, decimals = 2) {
+	protected round(num: number, decimals = 2) {
 		return num.toFixed(decimals);
 	}
 
-	printCurrentCost() {
-		const { tokenUsage, model } = this;
+	protected printCurrentCost() {
+		const { tokenUsage } = this;
 		const cost = this.tokenCost(
 			tokenUsage.promptTokens,
 			tokenUsage.completionTokens,
@@ -68,7 +71,7 @@ export class OpenAITokenCostCalculator {
 		);
 	}
 
-	print(message = "") {
+	protected print(message = "") {
 		console.log(message);
 	}
 }

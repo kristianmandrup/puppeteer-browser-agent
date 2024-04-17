@@ -47,10 +47,34 @@ export class MyAgentPlanner extends AgentPlanner {
   protected createDriver() {
     this.driver = new MyAgentDriver(this.opts);
   }
+
+  protected createMessageSender() {
+    return new MyMessageSender();
+  }
+}
+
+export class MyMessageSender extends MessageSender {
+  // override as necessary
+
+  protected createController() {
+    return new MyAIController(this.model, definitions, this.opts);
+  }
+
+  protected createTokenCostCalculator() {
+    return new MyAITokenCostCalculator(this.model, this.opts);
+  }
 }
 
 export class MyAgentDriver extends AgentDriver {
   // override as necessary
+
+  protected createMessageBuilder() {
+    return new MyMessageBuilder();
+  }
+
+  protected createPageScaper() {
+    return new MyPageScaper();
+  }
 
   protected createElementSelector() {
     return new MyElementSelector(this.page);
@@ -61,16 +85,18 @@ export class MyAgentDriver extends AgentDriver {
   }
 }
 
-export class MyAgentBrowser {}
+export class MyAgentBrowser extends AgentBrowser {
+  // override as necessary
+}
 
-export class MyElementSelector {
+export class MyElementSelector extends ElementSelector {
   // override as necessary
   createPageNavigator() {
     return new MyPageNavigator(this.page);
   }
 }
 
-export class MyPageNavigator {
+export class MyPageNavigator extends DocumentNavigator {
   // override as necessary
 
   createElementEvaluator(element: Element, id: number, selector: string) {
@@ -78,7 +104,26 @@ export class MyPageNavigator {
   }
 }
 
+export class MyPageScraper extends PageScraper {
+  // override as necessary
+}
+
 // And so on...
+
+const context = {
+  role: "system",
+  content: `## OBJECTIVE ##
+You have been tasked with crawling the internet based on a task given by the user. You are connected to a web browser which you can control via function calls to navigate to pages and list elements on the page. You can also type into search boxes and other input fields and send forms. You can also click links on the page. You will behave as a human browsing the web.
+
+You will try to navigate directly to the most relevant web address. If you were given a URL, go to it directly. If you encounter a Page Not Found error, try another URL. If multiple URLs don't work, you are probably using an outdated version of the URL scheme of that website. In that case, try navigating to their front page and using their search bar or try navigating to the right place with links.
+`,
+};
+
+const planner = new MyAgentPlanner(context, {
+  debug: true,
+});
+
+await planner.runPlan();
 ```
 
 ## Contribute

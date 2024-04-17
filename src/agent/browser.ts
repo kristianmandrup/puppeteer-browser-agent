@@ -51,14 +51,20 @@ export class AgentBrowser implements IAgentBrowser {
 			return;
 		}
 
-		this.browser = await puppeteer.launch({
+		this.browser = await this.createPuppeteerBrowser();
+		this.page = await this.getNewPage();
+		await this.page?.setViewport(this.viewport);
+		this.launched = true;
+	}
+
+	async getNewPage() {
+		return await this.browser?.newPage();
+	}
+
+	async createPuppeteerBrowser() {
+		return await puppeteer.launch({
 			headless: this.headless ? "shell" : false,
 		});
-
-		this.page = await this.browser.newPage();
-
-		await this.page.setViewport(this.viewport);
-		this.launched = true;
 	}
 
 	public async start() {

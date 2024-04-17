@@ -1,17 +1,17 @@
 import cheerio, { type CheerioAPI } from "cheerio";
+import type { DebugOpts } from "../../../types";
 
 export interface IHtmlFormatter {
-	format(): any;
+	format(html: string): CheerioAPI;
 }
 
 export class HtmlFormatter implements IHtmlFormatter {
-	html: string;
-	$: CheerioAPI;
+	html?: string;
+	$?: CheerioAPI;
+	debug: boolean;
 
-	constructor(html: string) {
-		this.html = html;
-		const cleanHtml = this.html.replace(/<\//g, " </");
-		this.$ = cheerio.load(cleanHtml);
+	constructor(opts: DebugOpts = {}) {
+		this.debug = Boolean(opts.debug);
 	}
 
 	protected get prioritySelectors() {
@@ -25,7 +25,10 @@ export class HtmlFormatter implements IHtmlFormatter {
 		];
 	}
 
-	public format() {
+	public format(html: string) {
+		this.html = html;
+		const cleanHtml = this.html.replace(/<\//g, " </");
+		this.$ = cheerio.load(cleanHtml);
 		const $ = this.$;
 		$("script, style").remove();
 

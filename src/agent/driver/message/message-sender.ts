@@ -1,9 +1,15 @@
 import type { DebugOpts } from "../../../types";
 import fs from "node:fs";
 import { definitions } from "./definitions";
-import { OpenAITokenCostCalculator } from "../../../ai/openai/token-cost-calculator";
+import {
+	type IOpenAITokenCostCalculator,
+	OpenAITokenCostCalculator,
+} from "../../../ai/openai/token-cost-calculator";
 import type { ActionConfig } from "../../planner";
-import { OpenAIController } from "../../../ai/openai/controller";
+import {
+	type IOpenAIController,
+	OpenAIController,
+} from "../../../ai/openai/controller";
 
 type AiResponseData = {
 	choices: any[];
@@ -42,9 +48,9 @@ export class MessageSender implements IMessageSender {
 	autopilot = true;
 	opts: DebugOpts = {};
 	model = "gpt-3.5";
-	calculator?: OpenAITokenCostCalculator;
+	calculator?: IOpenAITokenCostCalculator;
 	actions: any[] = [];
-	controller?: OpenAIController;
+	controller?: IOpenAIController;
 
 	constructor(model: string, opts: DebugOpts = {}) {
 		this.debug = Boolean(opts.debug);
