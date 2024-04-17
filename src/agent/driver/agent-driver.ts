@@ -115,6 +115,9 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	addDefinition(definition: any, overwrite = false) {
+		if (!definition) {
+			return;
+		}
 		if (Array.isArray(definition)) {
 			this.addDefinitions(definition, overwrite);
 			return;
@@ -158,7 +161,9 @@ export class AgentDriver implements IAgentDriver {
 
 	public registerAction(label: string, action: IDriverAction) {
 		this.actions[label] = action;
-		this.addDefinition(action.definition);
+		if (action.definition) {
+			this.addDefinition(action.definition);
+		}
 	}
 
 	public removeAction(label: string) {
