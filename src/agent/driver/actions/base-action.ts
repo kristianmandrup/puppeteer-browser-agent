@@ -36,24 +36,24 @@ export abstract class BaseDriverAction implements IDriverAction {
 		this.initialize();
 	}
 
-	// override as needed
-	protected initialize() {}
-
-	setMessage(message: string) {
-		this.message = message;
-	}
-
-	addToMessage(message: string) {
-		this.message += message;
-	}
-
-	get page() {
-		return this.driver.page;
-	}
-
 	// biome-ignore lint/suspicious/useAwait: <explanation>
 	public async execute() {
 		this.log("Action: To be implemented");
+	}
+
+	// override as needed
+	protected initialize() {}
+
+	protected setMessage(message: string) {
+		this.message = message;
+	}
+
+	protected addToMessage(message: string) {
+		this.message += message;
+	}
+
+	protected get page() {
+		return this.driver.page;
 	}
 
 	protected get autopilot() {

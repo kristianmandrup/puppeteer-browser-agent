@@ -1,7 +1,6 @@
 import type { ElementHandle, PuppeteerLifeCycleEvent } from "puppeteer";
 import type { IDriverAction } from "./base-action";
 import type { DebugOpts } from "../../../types";
-import type { IElementSelector } from "../../../elements";
 import { ElementAction } from "./element-action";
 
 export interface IGotoUrlAction extends IDriverAction {}

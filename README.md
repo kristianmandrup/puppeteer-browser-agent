@@ -42,6 +42,10 @@ These actions are:
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
 
+Any action must have an async `execute` function which performs the given action.
+
+Action classes can extend either of the abstract classes `BaseDriverAction` or `ElementAction`. `ElementAction` is useful for actions that directly interact with page elements, whereas `BaseDriverAction` is for more general actions that do not interact with page elements.
+
 ## Action definitions
 
 ```ts
