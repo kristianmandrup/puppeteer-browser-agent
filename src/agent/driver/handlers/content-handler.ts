@@ -16,11 +16,11 @@ export class ContentResponseHandler extends BaseResponseHandler {
 		if (nextContent === "") {
 			nextContent = "<empty response>";
 		}
-		await this.setAiMessage(nextContent);
+		await this.createMessageForController(nextContent);
 	}
 
-	setAiMessage(content: string) {
-		this.driver.setAiMessage(content);
+	createMessageForController(content: string) {
+		this.driver.createMessageForController(content);
 	}
 
 	printCurrentCost() {

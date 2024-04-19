@@ -184,7 +184,7 @@ export class MyAgentPlanner extends AgentPlanner {
   }
 }
 
-export class MyMessageSender extends MessageSender {
+export class MyMessageBroker extends MessageBroker {
   // override as necessary
 
   protected createController() {
@@ -193,6 +193,18 @@ export class MyMessageSender extends MessageSender {
 
   protected createTokenCostCalculator() {
     return new MyAITokenCostCalculator(this.driver, this.opts);
+  }
+}
+
+// Class to control interaction with the AI used to control the puppeteer browser agent
+export class MyAIController implements IAIController {
+  public async getResponse(
+    messages: any[],
+    definitions: any[],
+    fnCall = "auto"
+  ) {
+    // ... fetch response from AI
+    return await response?.json();
   }
 }
 
@@ -208,12 +220,8 @@ export class MyAgentDriver extends AgentDriver {
     return new MyMessageBuilder(this);
   }
 
-  protected createMessageSender() {
-    return new MyMessageSender(this);
-  }
-
-  protected createPageScaper() {
-    return new MyPageScaper(this);
+  protected createMessageBroker() {
+    return new MyMessageBroker(this);
   }
 
   protected createElementSelector() {
@@ -222,6 +230,14 @@ export class MyAgentDriver extends AgentDriver {
 
   protected createAgentBrowser() {
     return new MyAgentBrowser(this);
+  }
+}
+
+export class MyStepRunner extends StepRunner {
+  // override as necessary
+
+  protected createPageScaper() {
+    return new MyPageScaper(this);
   }
 }
 
@@ -307,22 +323,39 @@ const planner = new MyAgentPlanner(context, {
   debug: true,
 });
 
-await planner.runPlan();
+const { driver } = planer;
 
 // create actions and register them with the driver
 const myGotoUrlAction = new MyGotoUrlAction();
-planner.driver.registerAction(myGotoUrlAction, "goto_url");
+driver.registerAction(myGotoUrlAction, "goto_url");
 
 // the following demonstrates using the id param of registerAction to register a special purpose action
 const specialConfig = {
   // ...
 };
 const myGotoUrlAction = new MyGotoUrlAction(specialConfig);
-planner.driver.registerAction(myGotoUrlAction, "special_goto_url");
+driver.registerAction(myGotoUrlAction, "special_goto_url");
 // register more actions as needed
 
 // set action definitions via planner
-planner.driver.addDefinitions(definitions);
+driver.addDefinitions(definitions);
+
+// configure step runner with a custom response handler
+const { stepRunner } = driver;
+
+class MyCustomResponseHandler implements IResponseHandler {
+  // ...
+  async handle(step: any) {
+    // ...
+  }
+}
+
+const customHandler = new MyCustomResponseHandler();
+
+stepRunner.registerHandler(customHandler);
+
+// run the plan
+await planner.runPlan();
 ```
 
 ## Contribute

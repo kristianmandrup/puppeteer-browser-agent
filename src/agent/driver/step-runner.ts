@@ -9,7 +9,7 @@ import type { ElementHandle } from "puppeteer";
 
 export interface IStepRunner {
 	// noContent: boolean;
-	run(linksAndInputs: any, element?: any): Promise<void>;
+	run(step: any): Promise<void>;
 	noContent: boolean;
 	element?: ElementHandle<Element>;
 	linksAndInputs: ElementHandle<Element>[];
@@ -54,6 +54,10 @@ export class StepRunner {
 		await this.handleStep();
 		await this.prepareNextStep();
 		this.logContext();
+		await this.doNextStep();
+	}
+
+	protected async doNextStep() {
 		await this.run(this.step);
 	}
 

@@ -11,7 +11,7 @@ import {
 } from "../../../ai/openai/controller";
 import type { IAgentDriver } from "../agent-driver";
 
-export type AiResponseData = {
+export type ControllerResponseData = {
 	choices: any[];
 	usage: TokenUsage;
 };
@@ -84,7 +84,7 @@ export class MessageBroker implements IMessageBroker {
 			this.definitions,
 		);
 
-		const data = await this.getAiResponseData(
+		const data = await this.getControllerResponseData(
 			actionConfig,
 			filteredDefinitions,
 		);
@@ -122,7 +122,7 @@ export class MessageBroker implements IMessageBroker {
 		);
 	}
 
-	protected async getAiResponseData(
+	protected async getControllerResponseData(
 		actionConfig: ActionConfig,
 		filteredDefinitions: any[],
 	) {
@@ -182,11 +182,11 @@ export class MessageBroker implements IMessageBroker {
 		return cost.toFixed(decimals);
 	}
 
-	protected getMessageFromAiData(data: AiResponseData) {
+	protected getMessageFromAiData(data: ControllerResponseData) {
 		return data.choices[0].message;
 	}
 
-	protected onAutoPilotActivated(data: AiResponseData) {
+	protected onAutoPilotActivated(data: ControllerResponseData) {
 		if (!this.autopilot) {
 			return;
 		}

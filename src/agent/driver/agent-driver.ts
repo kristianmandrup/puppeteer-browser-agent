@@ -46,7 +46,7 @@ export interface IAgentDriver {
 	structuredMsg: StructuredMsg;
 	context?: any[];
 	message?: string;
-	setAiMessage(content: string): Promise<void>;
+	createMessageForController(content: string): Promise<void>;
 	start(): Promise<void>;
 	closeBrowser(): void;
 	run(agentState: IAgentState): Promise<void>;
@@ -92,7 +92,7 @@ export class AgentDriver implements IAgentDriver {
 	autopilot = false;
 	contextLengthLimit = 4000;
 	model = "gpt-3.5";
-	aiMsg?: any;
+	messageToController?: any;
 	debug = false;
 	agentState?: IAgentState;
 	nextStep: any;
@@ -193,7 +193,7 @@ export class AgentDriver implements IAgentDriver {
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		element?: any,
 	) {
-		await this.stepRunner.run(linksAndInputs, element);
+		await this.stepRunner.run(this.agentState?.response);
 	}
 
 	public closeBrowser() {
@@ -257,7 +257,7 @@ export class AgentDriver implements IAgentDriver {
 		return this.autopilot;
 	}
 
-	protected async createMessage(content: string) {
+	protected async getAnswerTo(content: string) {
 		if (this.autopilotOn) {
 			return await this.getInput(`<!_RESPONSE_!>${JSON.stringify(content)}\n`);
 		}
@@ -279,11 +279,12 @@ export class AgentDriver implements IAgentDriver {
 		console.info("send", message);
 	}
 
-	public async setAiMessage(content: string) {
-		this.message = await this.createMessage(content);
-		this.aiMsg = {
+	public async createMessageForController(content: string) {
+		const answer = await this.getAnswerTo(content);
+		this.message = answer;
+		this.messageToController = {
 			role: "user",
-			content: this.message,
+			content: answer,
 		};
 	}
 
