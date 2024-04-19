@@ -1,4 +1,6 @@
 import { ElementAction } from "./element-action";
 
 // returns a summary of content on the page
-export class PageSummaryAction extends ElementAction {}
+export class GetSummaryAction extends ElementAction {
+	name = "get_summary";
+}

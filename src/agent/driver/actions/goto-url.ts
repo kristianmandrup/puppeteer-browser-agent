@@ -9,9 +9,10 @@ export type GotoUrlOpts = DebugOpts & {};
 export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 	waitUntil: PuppeteerLifeCycleEvent = "load";
 	linksAndInputs?: ElementHandle<Element>[];
+	name = "goto_url";
 
 	onStart(url: string) {
-		this.log(`${this.taskPrefix}Going to ${url}`);
+		this.logTask(`Going to ${url}`);
 	}
 
 	async execute() {
@@ -41,7 +42,7 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 	}
 
 	onStartScraping() {
-		this.log(`${this.taskPrefix}Scraping page...`);
+		this.logTask("Scraping page...");
 	}
 
 	get defaultGotoErrorMessage() {

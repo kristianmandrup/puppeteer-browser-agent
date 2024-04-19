@@ -34,21 +34,19 @@ export type DriverOpts = DebugOpts & {
 };
 
 export interface IAgentDriver {
-	registerAction(label: string, action: IDriverAction): void;
-	removeAction(label: string): void;
+	registerAction(action: IDriverAction, id?: string): void;
+	removeAction(id: string): void;
 	start(): Promise<void>;
 	closeBrowser(): void;
 	run(context: string[], response: HTTPResponse): Promise<void>;
 	doStep(
-		context: string[],
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		nextStep: any,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		linksAndInputs: any,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		element: any,
 	): Promise<void>;
-	sendMessage(msg: string): void;
+	setMessage(msg: string): void;
+	addToMessage(message: string): void;
 	getInput(msg: string): Promise<string>;
 	page?: Page;
 	elementSelector: IElementSelector;
@@ -61,6 +59,7 @@ export interface IAgentDriver {
 	inputController: IInputController;
 	log(msg: any): void;
 	messageSender: IMessageSender;
+	noContent: boolean;
 }
 
 export class AgentDriver implements IAgentDriver {
@@ -79,6 +78,7 @@ export class AgentDriver implements IAgentDriver {
 	aiMsg?: any;
 	debug = false;
 	noContent = false;
+	nextStep: any;
 
 	context?: string[] = [];
 	elementSelector: IElementSelector;
@@ -106,15 +106,11 @@ export class AgentDriver implements IAgentDriver {
 		this.inputController = this.createInputController();
 	}
 
-	createMessageSender() {
-		return new MessageSender(this, this.opts);
-	}
-
-	setDefinitions(definitions: any[]) {
+	public setDefinitions(definitions: any[]) {
 		this.definitions = definitions;
 	}
 
-	addDefinition(definition: any, overwrite = false) {
+	public addDefinition(definition: any, overwrite = false) {
 		if (!definition) {
 			return;
 		}
@@ -125,7 +121,7 @@ export class AgentDriver implements IAgentDriver {
 		this.addDefinitions([definition], overwrite);
 	}
 
-	addDefinitions(definitions: any[], overwrite = false) {
+	public addDefinitions(definitions: any[], overwrite = false) {
 		for (const definition of definitions) {
 			if (overwrite || !this.definitions.includes(definition)) {
 				this.definitions.push(definition);
@@ -143,6 +139,49 @@ export class AgentDriver implements IAgentDriver {
 		};
 	}
 
+	public registerAction(action: IDriverAction, id?: string) {
+		const actionId = id || action.name;
+		this.actions[actionId] = action;
+		if (action.definition) {
+			this.addDefinition(action.definition);
+		}
+	}
+
+	public removeAction(id: string) {
+		delete this.actions[id];
+	}
+
+	public async start() {
+		this.initialize();
+		this.page = await this.openBrowserPage();
+	}
+
+	public async run(context: string[], response: HTTPResponse) {
+		this.context = context;
+		this.nextStep = response;
+		await this.doStep([]);
+		this.closeBrowser();
+	}
+
+	public closeBrowser() {
+		this.browser.close();
+	}
+
+	public log(msg: any) {
+		if (!this.debug) {
+			return;
+		}
+		console.info(msg);
+	}
+
+	protected initialize() {
+		this.log("initializing...");
+	}
+
+	protected createMessageSender() {
+		return new MessageSender(this, this.opts);
+	}
+
 	protected createInputController() {
 		return new TerminalInputController(this.createDefaultInputReader);
 	}
@@ -157,36 +196,6 @@ export class AgentDriver implements IAgentDriver {
 
 	protected createAgentBrowser() {
 		return new AgentBrowser(this);
-	}
-
-	public registerAction(label: string, action: IDriverAction) {
-		this.actions[label] = action;
-		if (action.definition) {
-			this.addDefinition(action.definition);
-		}
-	}
-
-	public removeAction(label: string) {
-		delete this.actions[label];
-	}
-
-	public async start() {
-		this.initialize();
-		this.page = await this.openBrowserPage();
-	}
-
-	public async run(context: string[], response: HTTPResponse) {
-		this.context = context;
-		await this.doStep(context, response, [], null);
-		this.browser.close();
-	}
-
-	public closeBrowser() {
-		this.browser.close();
-	}
-
-	protected initialize() {
-		this.log("initializing...");
 	}
 
 	protected async openBrowserPage() {
@@ -216,20 +225,22 @@ export class AgentDriver implements IAgentDriver {
 		);
 	}
 
-	protected findAction(label: string): IDriverAction {
-		const action = this.actions[label];
+	protected findAction(id: string): IDriverAction {
+		const action = this.actions[id];
 		if (!action) {
-			throw new Error(`Action ${label} is not registered`);
+			throw new Error(`Action ${id} is not registered`);
 		}
 		return action;
 	}
 
-	protected performAction(label: string) {
+	protected performAction(actionId: string) {
 		try {
-			const action = this.findAction(label);
+			const action = this.findAction(actionId);
+			action.setState({ args: this.fnArgs, context: this.context });
 			action.execute();
 			return true;
-		} catch (_err) {
+		} catch (err: any) {
+			this.log(err.message || `Action error ${actionId}`);
 			return false;
 		}
 	}
@@ -248,16 +259,22 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	protected doFunction(nextStep: any) {
-		if (!nextStep.function_call) {
+	protected doStepAsFunction(nextStep: any) {
+		if (!this.isFunctionCallStep(nextStep)) {
 			return false;
 		}
+		this.setFunctionAttributes(nextStep);
+		this.performAction(this.fnName);
+	}
+
+	setFunctionAttributes(nextStep: any) {
 		this.fn = nextStep.function_call;
 		this.fnName = this.fn.name;
+		this.fnArgs = this.parseArgs();
+	}
 
-		this.parseArgs();
-		this.performAction(this.fnName);
-		return true;
+	isFunctionCallStep(step: any) {
+		return step.function_call;
 	}
 
 	protected printCurrentCost() {
@@ -269,9 +286,11 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	protected async notFunction(nextStep: any) {
+	protected async doStepAsContent(nextStep: any) {
+		if (this.isFunctionCallStep(nextStep)) {
+			return;
+		}
 		this.printCurrentCost();
-
 		let nextContent = nextStep.content.trim();
 
 		if (nextContent === "") {
@@ -292,6 +311,34 @@ export class AgentDriver implements IAgentDriver {
 		return await this.inputController.getInput(prompt);
 	}
 
+	public addToMessage(message: string) {
+		this.message += message;
+	}
+
+	// override
+	public setMessage(message: string) {
+		this.message = message;
+		console.info("send", message);
+	}
+
+	public async doStep(
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		linksAndInputs: any,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		element?: any,
+	) {
+		this.noContent = false;
+		this.performStep(this.nextStep);
+		this.performInteraction();
+		this.logContext();
+		await this.doStep(linksAndInputs, element);
+	}
+
+	protected performStep(step: any) {
+		this.doStepAsFunction(step);
+		this.doStepAsContent(step);
+	}
+
 	protected async setAiMessage(nextContent: string) {
 		this.message = await this.createMessage(nextContent);
 		this.aiMsg = {
@@ -300,38 +347,8 @@ export class AgentDriver implements IAgentDriver {
 		};
 	}
 
-	// override
-	public sendMessage(msg: string) {
-		console.info("send", msg);
-	}
-
-	public async doStep(
-		context: string[],
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		nextStep: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		linksAndInputs: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		element: any,
-	) {
-		this.noContent = false;
-
-		this.doFunction(nextStep) || this.notFunction(nextStep);
-		this.performInteraction();
-		this.logContext();
-
-		await this.doStep(context, nextStep, linksAndInputs, element);
-	}
-
 	protected createPageScraper() {
 		return new PageScraper(this);
-	}
-
-	public log(msg: any) {
-		if (!this.debug) {
-			return;
-		}
-		console.info(msg);
 	}
 
 	protected logContext() {
@@ -362,18 +379,37 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	protected async performInteraction() {
+		this.ensurePageContent();
+		this.setPageUrl();
+		await this.getNextStep();
+		this.updateContext();
+	}
+
+	async ensurePageContent() {
 		if (!this.hasContent()) {
 			const pageContent = await this.getPageContent();
 			this.addPageContent(pageContent);
 		}
-		const url = await this.page?.url();
-		url && this.messageBuilder.setUrl(url);
+	}
 
-		const nextStep = await this.sendContextualMessage(this.msg, this.context);
-		this.messageBuilder.setContent(this.message);
-
+	updateContext() {
 		this.addToContext(this.msg);
-		this.addToContext(nextStep);
+		this.addToContext(this.nextStep);
+	}
+
+	async getNextStep() {
+		const response = await this.sendContextualMessage(this.msg, this.context);
+		this.messageBuilder.setContent(this.message);
+		this.nextStep = response;
+	}
+
+	async setPageUrl() {
+		const url = await this.getPageUrl();
+		url && this.messageBuilder.setUrl(url);
+	}
+
+	async getPageUrl() {
+		return await this.page?.url();
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
@@ -388,7 +424,7 @@ export class AgentDriver implements IAgentDriver {
 			name: "auto",
 		},
 	) {
-		this.messageSender.sendMessageToController(
+		await this.messageSender.sendMessageToController(
 			structuredMsg,
 			context,
 			actionConfig,

@@ -21,18 +21,21 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	downloadStarted = false;
 	navigator: IPageNavigator;
 
+	name = "click_link";
+
 	constructor(
 		driver: IAgentDriver,
-		fnArgs: FnArgs,
-		context: Context,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		linksAndInputs: any[],
 	) {
-		super(driver, fnArgs, context);
-		this.linkId = fnArgs.pgpt_id;
-		this.linkText = fnArgs.text;
+		super(driver);
 		this.linksAndInputs = linksAndInputs;
 		this.navigator = this.createNavigator();
+	}
+
+	protected updateState() {
+		this.linkId = this.fnArgs.pgpt_id;
+		this.linkText = this.fnArgs.text;
 	}
 
 	protected createNavigator() {
@@ -67,7 +70,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	}
 
 	onStart(linkText?: string) {
-		this.log(`${this.taskPrefix}Clicking link "${linkText}"`);
+		this.logTask(`Clicking link "${linkText}"`);
 	}
 
 	initAction() {
@@ -99,13 +102,13 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	}
 
 	onTimeOutError(_link?: HTMLAnchorElement) {
-		this.sendMessage("NOTICE: The click did not cause a navigation.");
+		this.setMessage("NOTICE: The click did not cause a navigation.");
 	}
 
 	onError(link: any) {
 		const linkText = link ? link.text : "";
 		const message = `Sorry, but link number ${this.linkId} (${linkText}) is not clickable, please select another link or another command. You can also try to go to the link URL directly with "goto_url".`;
-		this.sendMessage(message);
+		this.setMessage(message);
 	}
 
 	async clickLink() {
@@ -127,19 +130,22 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 
 	onLinkNavigation() {
 		const message = `Link clicked! You are now on ${this.url}`;
-		this.sendMessage(message);
+		this.setMessage(message);
 	}
 
 	onDownloadStarted() {
 		if (!this.downloadStarted) {
 			return;
 		}
-		// ??
-		// downloadStarted = false;
-		// noContent = true;
+		this.downloadStarted = false;
+		this.noContent = true;
 		const message = "Link clicked and file download started successfully!";
-		this.sendMessage(message);
+		this.setMessage(message);
 		return true;
+	}
+
+	set noContent(val: boolean) {
+		this.driver.noContent = val;
 	}
 
 	async execute() {
@@ -156,7 +162,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 
 	async scrapePage() {
 		this.validatePage();
-		this.log(`${this.taskPrefix}Scraping page...`);
+		this.logTask("Scraping page...");
 		this.linksAndInputs = this.page && (await this.getElementsOn(this.page));
 	}
 

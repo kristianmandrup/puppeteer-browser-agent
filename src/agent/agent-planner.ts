@@ -38,6 +38,9 @@ export type PlannerOpts = DebugOpts & {
 
 export interface IAgentPlanner {
 	runPlan(): Promise<void>;
+	definitions: any[];
+	setDefinitions(definitions: any[]): void;
+	addDefinitions(definitions: any[]): void;
 }
 
 export class AgentPlanner implements IAgentPlanner {
@@ -51,7 +54,7 @@ export class AgentPlanner implements IAgentPlanner {
 	driver: IAgentDriver;
 	debug: boolean;
 	msg = {};
-	acceptPlan?: string;
+	acceptPlan?: boolean;
 	autopilot = false;
 	messageSender?: IMessageSender;
 	model: string;
@@ -68,12 +71,16 @@ export class AgentPlanner implements IAgentPlanner {
 			this.driver.messageSender || this.createMessageSender();
 	}
 
-	get definitions() {
+	public get definitions() {
 		return this.driver.definitions;
 	}
 
-	setDefinitions(definitions: any[]) {
+	public setDefinitions(definitions: any[]) {
 		this.driver.setDefinitions(definitions);
+	}
+
+	public addDefinitions(definitions: any[]) {
+		this.driver.addDefinitions(definitions);
 	}
 
 	public async runPlan() {
@@ -98,7 +105,7 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected isPlanAccepted(): boolean {
-		return this.acceptPlan === "y";
+		return Boolean(this.acceptPlan);
 	}
 
 	public async start() {
@@ -168,13 +175,18 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected async handleAcceptPlan() {
-		if (this.autopilot) {
-			this.acceptPlan = "y";
-			return;
-		}
-		this.acceptPlan = await this.getInput(
+		this.acceptPlan = this.autoAccept() || (await this.userAccept());
+	}
+
+	protected async userAccept() {
+		const answer = await this.getInput(
 			"Do you want to continue with this plan? (y/n): ",
 		);
+		return answer === "y";
+	}
+
+	protected autoAccept() {
+		return this.autopilot;
 	}
 
 	protected async getInput(prompt: string) {
@@ -182,12 +194,12 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected handleArgs(args: any) {
-		this.print("\n## PLAN ##");
-		this.print(args.plan);
-		this.print("## PLAN ##\n");
+		this.log("\n## PLAN ##");
+		this.log(args.plan);
+		this.log("## PLAN ##\n");
 	}
 
-	protected print(data: any) {
-		console.info(data);
+	protected log(data: any) {
+		this.driver.log(data);
 	}
 }

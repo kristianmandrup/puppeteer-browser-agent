@@ -12,9 +12,10 @@ export class ReadFileAction
 	filename?: string;
 	contextLengthLimit = 4000;
 	skipFile = false;
+	name = "read_file";
 
 	onStartTask() {
-		this.log(`${this.taskPrefix}Reading file ${this.filename}`);
+		this.logTask(`Reading file ${this.filename}`);
 	}
 
 	async readFile() {
@@ -45,7 +46,7 @@ export class ReadFileAction
 	}
 
 	handleReadError(_error: any) {
-		this.sendMessage(`ERROR: The file ${this.filename} does not exist`);
+		this.setMessage(`ERROR: The file ${this.filename} does not exist`);
 		return;
 	}
 
@@ -64,7 +65,7 @@ export class ReadFileAction
 		if (!this.skipFile) {
 			return;
 		}
-		this.sendMessage(
+		this.setMessage(
 			`ERROR: You are not allowed to read this file: ${this.filename}`,
 		);
 	}

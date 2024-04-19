@@ -4,6 +4,8 @@ import type { DebugOpts } from "../../../types";
 export interface IDriverAction {
 	execute(): Promise<void>;
 	definition: any;
+	name: string;
+	setState({ args, context }: { args: any; context: any }): void;
 }
 
 export type IDriverActionOpts = DebugOpts & {
@@ -15,25 +17,40 @@ export abstract class BaseDriverAction implements IDriverAction {
 	fnArgs: FnArgs = {};
 	context: Context = [];
 	debug = false;
-	taskPrefix?: string;
-	message?: string;
 	definition: any;
 	opts: IDriverActionOpts;
+	taskPrefix = "";
+	name = "unknown";
 
-	constructor(
-		driver: IAgentDriver,
-		fnArgs: FnArgs,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		context: any[],
-		opts: IDriverActionOpts = {},
-	) {
+	constructor(driver: IAgentDriver, opts: IDriverActionOpts = {}) {
 		this.driver = driver;
 		this.opts = opts;
-		this.fnArgs = fnArgs;
-		this.context = context;
 		this.debug = Boolean(opts.debug);
 		this.definition = opts.definition;
+
+		this.baseInit();
 		this.initialize();
+	}
+
+	protected updateState() {}
+
+	public setState({ args, context }: { args: any; context: any }) {
+		this.setContext(context);
+		this.setArgs(args);
+	}
+
+	protected setContext(context: any[]) {
+		this.context = context;
+		this.updateState();
+	}
+
+	protected setArgs(args: any) {
+		this.fnArgs = args;
+		this.updateState();
+	}
+
+	protected get prefix(): string | undefined {
+		return this.taskPrefix;
 	}
 
 	// biome-ignore lint/suspicious/useAwait: <explanation>
@@ -41,15 +58,17 @@ export abstract class BaseDriverAction implements IDriverAction {
 		this.log("Action: To be implemented");
 	}
 
+	protected baseInit() {
+		if (this.autopilot) {
+			this.taskPrefix = "<!_TASK_!>";
+		}
+	}
+
 	// override as needed
 	protected initialize() {}
 
-	protected setMessage(message: string) {
-		this.message = message;
-	}
-
 	protected addToMessage(message: string) {
-		this.message += message;
+		this.driver.addToMessage(message);
 	}
 
 	protected get page() {
@@ -64,9 +83,17 @@ export abstract class BaseDriverAction implements IDriverAction {
 		return await this.driver.getInput(msg);
 	}
 
+	resetMessage() {
+		this.driver.setMessage("");
+	}
+
 	// biome-ignore lint/suspicious/useAwait: <explanation>
-	protected sendMessage(msg: string) {
-		this.driver.sendMessage(msg);
+	protected setMessage(msg: string) {
+		this.driver.setMessage(msg);
+	}
+
+	protected logTask(msg: any) {
+		this.log(`${this.prefix}${msg}`);
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>

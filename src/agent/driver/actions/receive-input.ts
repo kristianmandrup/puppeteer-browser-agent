@@ -14,6 +14,7 @@ export class ReceiveInputAction
 {
 	costCalculator?: ITokenCostCalculator;
 	text?: string;
+	name = "receive_input";
 
 	protected initialize(): void {
 		this.costCalculator = this.createCostCalculator();

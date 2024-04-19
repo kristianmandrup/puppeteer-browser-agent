@@ -26,7 +26,52 @@ The `AgentDriver` must implement `IAgentDriver` by supplying the async methods `
 The `start` method should start the browser and do any initialization necessary.
 The `run` method should implement the core logic which takes actions and performs them via the browser.
 
-The driver can register actions via the method `registerAction(label: string, action: IDriverAction)` and remove actions via `removeAction(label: string)`.
+The `run` method is configured to set the context, run `doStep` to perform the actions and when done close down the browser.
+
+`doStep` is configured to
+
+- perform the next step via puppeteer
+- perform any interaction with outside agents as a response to puppeteer actions
+- log the resulting context
+- perform the next step
+
+The step is a response from an external agent that is parsed.
+If the response has the shape of a function, the function attributes such as function name and parameters are parsed. These will then be used attempt to call a registered action. Otherwise the response will be treated as content.
+
+```ts
+this.noContent = false;
+this.performStep(this.nextStep);
+this.performInteraction();
+this.logContext();
+await this.doStep(linksAndInputs, element);
+```
+
+The `performStep` logic is rather elegant and simple
+
+- Attempt to do the step as a function or as content
+
+```ts
+this.doStepAsFunction(step);
+this.doStepAsContent(step);
+```
+
+The `performInteraction` method does the following
+
+- ensures page has content
+- sets url
+- retrieves next step to perform from external agent
+- updates the context
+
+```ts
+this.ensurePageContent();
+this.setPageUrl();
+await this.getNextStep();
+this.updateContext();
+```
+
+## Registering agent actions
+
+The driver can register actions via the method `registerAction(action: IDriverAction, id?: string)` and remove actions via `removeAction(id: string)`.
 
 ## Actions
 
@@ -38,15 +83,33 @@ These actions are:
 - `ClickLinkAction` implementing `IClickLinkAction` to click page links
 - `ReadFileAction` implementing `IReadFileAction` to read a file for instructions
 - `ReceiveInputAction` implementing `IReceiveInputAction` for user/agent input to instruct driver for decisions and actions
-- `SubmitFormAction` implementing `ISubmitFormAction` to enter data into form fields and submit forms
+- `EnterDataAction` implementing `IEnterDataAction` to enter data into form fields and submit forms
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
+
+In addition, a number of actions are left as placeholders and have yet to be implemented
+
+- `CodeSampleAction`
+- `PageNavigationOutlineAction`
+- `PageSectionOutlineAction`
+- `GetSummaryAction`
+- `TakeScreenshotAction`
 
 Any action must have an async `execute` function which performs the given action.
 
 Action classes can extend either of the abstract classes `BaseDriverAction` or `ElementAction`. `ElementAction` is useful for actions that directly interact with page elements, whereas `BaseDriverAction` is for more general actions that do not interact with page elements.
 
 ## Action definitions
+
+Action definitions are used to inform the browser agent which actions are available and how to use them, similar to the Tools functionality of f.ex [CrewAI]()
+
+Each definition must contain the following:
+
+- `name` ie. the name of the action
+- `description` what the action does
+- `parameters` the parameters that can be supplied to the function call to execute the action
+
+The `parameters` will be passed from an external agent to the driver and then passed into the action when the action is retrieved from the action registry by the driver. The action is then executed.
 
 ```ts
 const makePlan = {
@@ -88,7 +151,9 @@ export const definitions = [
 ];
 ```
 
-Note that actions may include a `definition` property as well. If such a property exists on the action, this defintion will be added automatically to the set of `definitions` when the action is registered.
+Definitions are supplied to the driver, either directly or via the planner using `setDefinitions`
+
+Any actions may include a `definition` property as well. If such a property exists on the action, this defintion will be added automatically to the set of `definitions` when the action is registered.
 
 ## Custom implementation example
 
@@ -234,13 +299,18 @@ await planner.runPlan();
 
 // create actions and register them with the driver
 const myGotoUrlAction = new MyGotoUrlAction();
-// ...
+planner.driver.registerAction(myGotoUrlAction, "goto_url");
 
-planner.driver.registerAction("goto_url", myGotoUrlAction);
+// the following demonstrates using the id param of registerAction to register a special purpose action
+const specialConfig = {
+  // ...
+};
+const myGotoUrlAction = new MyGotoUrlAction(specialConfig);
+planner.driver.registerAction(myGotoUrlAction, "special_goto_url");
 // register more actions as needed
 
-// set action definitions
-planner.driver.setDefinitions(definitions);
+// set action definitions via planner
+planner.driver.addDefinitions(definitions);
 ```
 
 ## Contribute

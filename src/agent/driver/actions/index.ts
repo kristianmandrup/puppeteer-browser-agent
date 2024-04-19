@@ -3,4 +3,4 @@ export * from "./click-link";
 export * from "./goto-url";
 export * from "./read-file";
 export * from "./receive-input";
-export * from "./submit-form";
+export * from "./enter-data";

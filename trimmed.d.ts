@@ -65,6 +65,7 @@ export declare class AgentDriver implements IAgentDriver {
     aiMsg?: any;
     debug: boolean;
     noContent: boolean;
+    nextStep: any;
     context?: string[];
     elementSelector: IElementSelector;
     messageBuilder: IMessageBuilder;
@@ -75,7 +76,6 @@ export declare class AgentDriver implements IAgentDriver {
     definitions: any[];
     opts: DriverOpts;
     constructor(opts?: DriverOpts);
-    createMessageSender(): MessageSender;
     setDefinitions(definitions: any[]): void;
     addDefinition(definition: any, overwrite?: boolean): void;
     addDefinitions(definitions: any[], overwrite?: boolean): void;
@@ -230,40 +230,50 @@ export declare class AgentDriver implements IAgentDriver {
     createDefaultInputReader(): {
         question: (text: string) => Promise<string>;
     };
+    registerAction(action: IDriverAction, id?: string): void;
+    removeAction(id: string): void;
+    start(): Promise<void>;
+    run(context: string[], response: HTTPResponse): Promise<void>;
+    closeBrowser(): void;
+    log(msg: any): void;
+    protected initialize(): void;
+    protected createMessageSender(): MessageSender;
     protected createInputController(): TerminalInputController;
     protected createMessageBuilder(): MessageBuilder;
     protected createElementSelector(): ElementSelector;
     protected createAgentBrowser(): AgentBrowser;
-    registerAction(label: string, action: IDriverAction): void;
-    removeAction(label: string): void;
-    start(): Promise<void>;
-    run(context: string[], response: HTTPResponse): Promise<void>;
-    closeBrowser(): void;
-    protected initialize(): void;
     protected openBrowserPage(): Promise<Page>;
     protected parseArgs(): any;
     protected handleAction(actionName: string): void;
     protected defaultAction(): void;
-    protected findAction(label: string): IDriverAction;
-    protected performAction(label: string): boolean;
+    protected findAction(id: string): IDriverAction;
+    protected performAction(actionId: string): boolean;
     protected communicateMessage(msg: string): void;
-    protected doFunction(nextStep: any): boolean;
+    protected doStepAsFunction(nextStep: any): false | undefined;
+    setFunctionAttributes(nextStep: any): void;
+    isFunctionCallStep(step: any): any;
     protected printCurrentCost(): void;
     protected get autopilotOn(): boolean;
-    protected notFunction(nextStep: any): Promise<void>;
+    protected doStepAsContent(nextStep: any): Promise<void>;
     protected createMessage(content: string): Promise<string>;
     getInput(prompt: string): Promise<string>;
+    addToMessage(message: string): void;
+    setMessage(message: string): void;
+    doStep(linksAndInputs: any, element?: any): Promise<void>;
+    protected performStep(step: any): void;
     protected setAiMessage(nextContent: string): Promise<void>;
-    sendMessage(msg: string): void;
-    doStep(context: string[], nextStep: any, linksAndInputs: any, element: any): Promise<void>;
     protected createPageScraper(): PageScraper;
-    log(msg: any): void;
     protected logContext(): void;
     protected hasContent(): boolean;
     protected getPageContent(): Promise<string>;
     protected addPageContent(pageContent: string): void;
     protected get msg(): StructuredMsg;
     protected performInteraction(): Promise<void>;
+    ensurePageContent(): Promise<void>;
+    updateContext(): void;
+    getNextStep(): Promise<void>;
+    setPageUrl(): Promise<void>;
+    getPageUrl(): Promise<string | undefined>;
     addToContext(data: any): void;
     sendContextualMessage(structuredMsg: StructuredMsg, context: any, actionConfig?: {
         name: string;
@@ -279,7 +289,7 @@ export declare class AgentPlanner implements IAgentPlanner {
     driver: IAgentDriver;
     debug: boolean;
     msg: {};
-    acceptPlan?: string;
+    acceptPlan?: boolean;
     autopilot: boolean;
     messageSender?: IMessageSender;
     model: string;
@@ -287,6 +297,7 @@ export declare class AgentPlanner implements IAgentPlanner {
     constructor(context: any, opts?: PlannerOpts);
     get definitions(): any[];
     setDefinitions(definitions: any[]): void;
+    addDefinitions(definitions: any[]): void;
     runPlan(): Promise<void>;
     protected createMessageSender(): MessageSender;
     protected createInitialContext(): {
@@ -305,9 +316,11 @@ export declare class AgentPlanner implements IAgentPlanner {
     protected getAgentResponse(): Promise<void>;
     protected sendMessageToController(msg: any, context: any, actionConfig: any): void;
     protected handleAcceptPlan(): Promise<void>;
+    protected userAccept(): Promise<boolean>;
+    protected autoAccept(): boolean;
     protected getInput(prompt: string): Promise<string>;
     protected handleArgs(args: any): void;
-    protected print(data: any): void;
+    protected log(data: any): void;
 }
 
 declare interface AIMessageRedacter {
@@ -329,19 +342,29 @@ export declare abstract class BaseDriverAction implements IDriverAction {
     fnArgs: FnArgs;
     context: Context;
     debug: boolean;
-    taskPrefix?: string;
-    message?: string;
     definition: any;
     opts: IDriverActionOpts;
-    constructor(driver: IAgentDriver, fnArgs: FnArgs, context: any[], opts?: IDriverActionOpts);
-    protected initialize(): void;
-    setMessage(message: string): void;
-    addToMessage(message: string): void;
-    get page(): Page | undefined;
+    taskPrefix: string;
+    name: string;
+    constructor(driver: IAgentDriver, opts?: IDriverActionOpts);
+    protected updateState(): void;
+    setState({ args, context }: {
+        args: any;
+        context: any;
+    }): void;
+    protected setContext(context: any[]): void;
+    protected setArgs(args: any): void;
+    protected get prefix(): string | undefined;
     execute(): Promise<void>;
+    protected baseInit(): void;
+    protected initialize(): void;
+    protected addToMessage(message: string): void;
+    protected get page(): Page | undefined;
     protected get autopilot(): boolean;
     protected getInput(msg: string): Promise<string>;
-    protected sendMessage(msg: string): void;
+    resetMessage(): void;
+    protected setMessage(msg: string): void;
+    protected logTask(msg: any): void;
     protected log(msg: any): void;
 }
 
@@ -363,7 +386,9 @@ export declare class ClickLinkAction extends ElementAction implements IClickLink
     responseCount: number;
     downloadStarted: boolean;
     navigator: IPageNavigator;
-    constructor(driver: IAgentDriver, fnArgs: FnArgs, context: Context, linksAndInputs: any[]);
+    name: string;
+    constructor(driver: IAgentDriver, linksAndInputs: any[]);
+    protected updateState(): void;
     protected createNavigator(): PageNavigator;
     protected missingLinkId(): void;
     missingLinkText(): void;
@@ -380,6 +405,7 @@ export declare class ClickLinkAction extends ElementAction implements IClickLink
     waitForNavigation(): Promise<void>;
     onLinkNavigation(): void;
     onDownloadStarted(): true | undefined;
+    set noContent(val: boolean);
     execute(): Promise<void>;
     validatePage(): void;
     scrapePage(): Promise<void>;
@@ -635,11 +661,33 @@ export declare class ElementTypeHandler implements IElementTypeHandler {
     protected formatOutput(): string;
 }
 
+export declare class EnterDataFormAction extends ElementAction implements IEnterDataAction {
+    formData: any;
+    prevInput: any;
+    linksAndInputs: ElementHandle<Element>[];
+    navigator: IPageNavigator;
+    taskName: string;
+    constructor(driver: IAgentDriver, opts?: DebugOpts);
+    protected createNavigator(): PageNavigator;
+    selectElement(elementCssSelector: string): Promise<ElementHandle<Element> | null | undefined>;
+    getElementAttr(element: ElementHandle<Element>, attrName: string): Promise<string>;
+    getElementType(element: ElementHandle<Element>): Promise<string>;
+    getElementName(element: ElementHandle<Element>): Promise<string>;
+    getElementTagName(element: ElementHandle<Element>): Promise<string>;
+    onSubmittable(tagName: string, type?: string): boolean;
+    onIputField(element: ElementHandle, data: any): Promise<void>;
+    execute(): Promise<void>;
+    protected waitForNavigation(): Promise<void>;
+    protected onSubmit(): Promise<void>;
+    onSubmitFormError(error: any): void;
+}
+
 export declare type FnArgs = Record<string, any>;
 
 export declare class GotoUrlAction extends ElementAction implements IGotoUrlAction {
     waitUntil: PuppeteerLifeCycleEvent;
     linksAndInputs?: ElementHandle<Element>[];
+    name: string;
     onStart(url: string): void;
     execute(): Promise<void>;
     onStartScraping(): void;
@@ -667,13 +715,14 @@ export declare interface IAgentBrowser {
 }
 
 export declare interface IAgentDriver {
-    registerAction(label: string, action: IDriverAction): void;
-    removeAction(label: string): void;
+    registerAction(action: IDriverAction, id?: string): void;
+    removeAction(id: string): void;
     start(): Promise<void>;
     closeBrowser(): void;
     run(context: string[], response: HTTPResponse): Promise<void>;
-    doStep(context: string[], nextStep: any, linksAndInputs: any, element: any): Promise<void>;
-    sendMessage(msg: string): void;
+    doStep(linksAndInputs: any, element: any): Promise<void>;
+    setMessage(msg: string): void;
+    addToMessage(message: string): void;
     getInput(msg: string): Promise<string>;
     page?: Page;
     elementSelector: IElementSelector;
@@ -686,10 +735,14 @@ export declare interface IAgentDriver {
     inputController: IInputController;
     log(msg: any): void;
     messageSender: IMessageSender;
+    noContent: boolean;
 }
 
 export declare interface IAgentPlanner {
     runPlan(): Promise<void>;
+    definitions: any[];
+    setDefinitions(definitions: any[]): void;
+    addDefinitions(definitions: any[]): void;
 }
 
 declare interface IAIController {
@@ -710,6 +763,11 @@ export declare interface IDocumentTraverser {
 export declare interface IDriverAction {
     execute(): Promise<void>;
     definition: any;
+    name: string;
+    setState({ args, context }: {
+        args: any;
+        context: any;
+    }): void;
 }
 
 export declare type IDriverActionOpts = DebugOpts & {
@@ -722,6 +780,9 @@ export declare interface IElementSelector {
 
 export declare interface IElementTypeHandler {
     handle(element: Element_2): string;
+}
+
+export declare interface IEnterDataAction extends IDriverAction {
 }
 
 export declare interface IGotoUrlAction extends IDriverAction {
@@ -774,9 +835,6 @@ export declare interface IReadFileAction extends IDriverAction {
 
 export declare interface IReceiveInputAction extends IDriverAction {
     receiveInput(msg: string): Promise<string>;
-}
-
-export declare interface ISumbitFormAction extends IDriverAction {
 }
 
 export declare interface ITagBuilder {
@@ -921,6 +979,7 @@ export declare class ReadFileAction extends BaseDriverAction implements IReadFil
     filename?: string;
     contextLengthLimit: number;
     skipFile: boolean;
+    name: string;
     onStartTask(): void;
     readFile(): Promise<boolean>;
     getFileData(): Promise<string>;
@@ -937,6 +996,7 @@ export declare class ReadFileAction extends BaseDriverAction implements IReadFil
 export declare class ReceiveInputAction extends BaseDriverAction implements IReceiveInputAction {
     costCalculator?: ITokenCostCalculator;
     text?: string;
+    name: string;
     protected initialize(): void;
     protected createCostCalculator(): OpenAITokenCostCalculator;
     execute(): Promise<void>;
@@ -960,27 +1020,6 @@ export declare type StructuredMsg = {
     content: string;
     url: string;
 };
-
-export declare class SubmitFormAction extends ElementAction implements ISumbitFormAction {
-    formData: any;
-    prevInput: any;
-    linksAndInputs: ElementHandle<Element>[];
-    navigator: IPageNavigator;
-    constructor(driver: IAgentDriver, fnArgs: FnArgs, context: any[], opts?: DebugOpts);
-    protected createNavigator(): PageNavigator;
-    selectElement(elementCssSelector: string): Promise<ElementHandle<Element> | null | undefined>;
-    getElementAttr(element: ElementHandle<Element>, attrName: string): Promise<string>;
-    getElementType(element: ElementHandle<Element>): Promise<string>;
-    getElementName(element: ElementHandle<Element>): Promise<string>;
-    getElementTagName(element: ElementHandle<Element>): Promise<string>;
-    onSubmittable(tagName: string, type?: string): boolean;
-    onIputField(element: ElementHandle, data: any): Promise<void>;
-    resetMessage(): void;
-    execute(): Promise<void>;
-    protected waitForNavigation(): Promise<void>;
-    protected onSubmit(): Promise<void>;
-    onSubmitFormError(error: any): void;
-}
 
 export declare class TagBuilder implements ITagBuilder {
     element: any;

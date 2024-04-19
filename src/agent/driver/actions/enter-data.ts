@@ -5,25 +5,20 @@ import type { FnArgs, IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 import { ElementAction } from "./element-action";
 
-export interface ISumbitFormAction extends IDriverAction {}
+export interface IEnterDataAction extends IDriverAction {}
 
-export class SubmitFormAction
+export class EnterDataFormAction
 	extends ElementAction
-	implements ISumbitFormAction
+	implements IEnterDataAction
 {
 	formData: any;
 	prevInput: any;
 	linksAndInputs: ElementHandle<Element>[] = [];
 	navigator: IPageNavigator;
+	taskName = "enter_data";
 
-	constructor(
-		driver: IAgentDriver,
-		fnArgs: FnArgs,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		context: any[],
-		opts: DebugOpts = {},
-	) {
-		super(driver, fnArgs, context, opts);
+	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
+		super(driver, opts);
 		this.navigator = this.createNavigator();
 	}
 
@@ -72,10 +67,6 @@ export class SubmitFormAction
 		const sanitized = text.replace("\n", " ");
 		this.log(`${this.taskPrefix}Typing "${sanitized}" to ${name}`);
 		this.addToMessage(`Typed "${text}" to input field "${name}"\n`);
-	}
-
-	resetMessage() {
-		this.message = "";
 	}
 
 	public async execute() {
