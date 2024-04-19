@@ -9,15 +9,15 @@ import type {
 } from "puppeteer";
 import type { IAgentDriver } from "./driver";
 
-type PageHeaders = Record<string, string>;
+export type PageHeaders = Record<string, string>;
 
-type ViewportOpts = {
+export type ViewportOpts = {
 	width?: number;
 	height?: number;
 	scaleFactor?: number;
 };
 
-type BrowserOpts = {
+export type BrowserOpts = {
 	debug?: boolean;
 	headless?: boolean;
 	viewport?: ViewportOpts;

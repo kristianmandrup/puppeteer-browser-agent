@@ -1,8 +1,17 @@
 {
 	"name": "puppeteer-browser-agent",
-	"version": "0.0.0-development",
+	"version": "0.0.1",
 	"description": "Puppeteer browser agent for use in AI agent systems",
-	"keywords": ["typescript", "library", "starter", "template"],
+	"keywords": [
+		"puppeteer",
+		"agent",
+		"gpt",
+		"ai",
+		"browser",
+		"screenscraper",
+		"automated",
+		"autopilot"
+	],
 	"homepage": "https://github.com/kristianmandrup/puppeteer-browser-agent",
 	"bugs": "https://github.com/kristianmandrup/puppeteer-browser-agent/issues",
 	"author": "Kristian Mandrup <kmandrup@gmail.com>",

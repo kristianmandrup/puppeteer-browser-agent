@@ -1,4 +1,4 @@
-export const definitions = [
+export const actionDefinitions = [
 	{
 		name: "make_plan",
 		description:

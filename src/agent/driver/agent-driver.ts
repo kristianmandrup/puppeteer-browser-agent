@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import type { HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser, type IAgentBrowser } from "../agent-browser.js";
-import { definitions } from "./definitions.js";
+import { actionDefinitions } from "./definitions.js";
 import {
 	ElementSelector,
 	type IElementSelector,
@@ -130,7 +130,7 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	defaultDefinitions() {
-		return definitions;
+		return actionDefinitions;
 	}
 
 	createDefaultInputReader() {

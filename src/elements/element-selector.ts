@@ -3,7 +3,7 @@ import fs from "node:fs";
 import { InteractiveElementHandler } from "./interactive-element-handler.js";
 import type { IAgentDriver } from "../agent/index.js";
 
-type SelectorOpts = {
+export type SelectorOpts = {
 	debug?: boolean;
 };
 

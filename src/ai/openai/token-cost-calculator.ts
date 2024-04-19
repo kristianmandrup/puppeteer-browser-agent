@@ -76,6 +76,6 @@ export class OpenAITokenCostCalculator {
 	}
 
 	protected print(message = "") {
-		console.log(message);
+		console.info(message);
 	}
 }

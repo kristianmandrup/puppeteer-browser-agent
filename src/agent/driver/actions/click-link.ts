@@ -1,5 +1,5 @@
 import { TimeoutError, type Page } from "puppeteer";
-import type { Context, FnArgs, IAgentDriver } from "../agent-driver";
+import type { IAgentDriver } from "../agent-driver";
 import type { IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
 import { ElementAction } from "./element-action";
@@ -49,7 +49,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 		this.message = "ERROR: Missing parameter pgpt_id";
 	}
 
-	missingLinkText() {
+	protected missingLinkText() {
 		if (this.linkText) {
 			return;
 		}
@@ -59,21 +59,21 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 			"Please the correct link on the page. Remember to set both the text and the pgpt_id parameter.";
 	}
 
-	findLink() {
+	protected findLink() {
 		return this.linksAndInputs.find(
 			(elem: Element) => elem && elem.id === this.linkId,
 		);
 	}
 
-	get page() {
+	protected get page() {
 		return this.driver.page;
 	}
 
-	onStart(linkText?: string) {
+	protected onStart(linkText?: string) {
 		this.logTask(`Clicking link "${linkText}"`);
 	}
 
-	initAction() {
+	protected initAction() {
 		this.onStart(this.link?.text);
 		this.requestCount = 0;
 		this.responseCount = 0;
@@ -84,7 +84,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 		}
 	}
 
-	get linkElementSelector() {
+	protected get linkElementSelector() {
 		return `.pgpt-element${this.linkId}`;
 	}
 
@@ -146,6 +146,10 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 
 	set noContent(val: boolean) {
 		this.driver.noContent = val;
+	}
+
+	get noContent() {
+		return this.driver.noContent;
 	}
 
 	async execute() {

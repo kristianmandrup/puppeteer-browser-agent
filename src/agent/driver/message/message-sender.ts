@@ -11,12 +11,12 @@ import {
 } from "../../../ai/openai/controller";
 import type { IAgentDriver } from "../agent-driver";
 
-type AiResponseData = {
+export type AiResponseData = {
 	choices: any[];
 	usage: TokenUsage;
 };
 
-type TokenUsage = {
+export type TokenUsage = {
 	completionTokens: number;
 	promptTokens: number;
 	totalTokens: number;

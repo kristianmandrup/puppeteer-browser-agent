@@ -4,7 +4,7 @@ import type { IAgentDriver } from "../agent";
 import type { DebugOpts } from "../types";
 const $ = cheerio;
 
-type Obj = Record<string, string | undefined>;
+export type ObjType = Record<string, string | undefined>;
 
 export interface ITagBuilder {
 	build(element: Element): any;
@@ -25,7 +25,7 @@ export class TagBuilder implements ITagBuilder {
 	href?: string;
 	placeholder?: string;
 	textContent?: string;
-	obj: Obj = {};
+	obj: ObjType = {};
 	driver: IAgentDriver;
 	opts: DebugOpts;
 
@@ -52,7 +52,7 @@ export class TagBuilder implements ITagBuilder {
 	createObj() {
 		const { tag, textContent, tagName } = this;
 
-		const obj: Obj = {
+		const obj: ObjType = {
 			tag: tag,
 		};
 
