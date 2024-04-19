@@ -1,13 +1,9 @@
-import fs from "node:fs";
 import type { HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser, type IAgentBrowser } from "../agent-browser.js";
-import { actionDefinitions } from "./definitions.js";
 import {
 	ElementSelector,
 	type IElementSelector,
 } from "../../elements/element-selector.js";
-import type { IDriverAction } from "./actions/base-action.js";
-import { type IPageScraper, PageScraper } from "./document/page-scraper.js";
 import {
 	type IMessageBuilder,
 	MessageBuilder,
@@ -18,9 +14,23 @@ import {
 	type IInputController,
 } from "./input/cli-input.js";
 import {
-	type IMessageSender,
-	MessageSender,
-} from "./message/message-sender.js";
+	type IMessageBroker,
+	MessageBroker,
+} from "./message/message-broker.js";
+import { type IStepRunner, StepRunner } from "./step-runner.js";
+import {
+	type ITokenCostCalculator,
+	OpenAITokenCostCalculator,
+} from "../../ai/index.js";
+import {
+	type TActionStore,
+	ActionsRegistry,
+	type IActionsRegistry,
+} from "./action-registry.js";
+import {
+	ActionDefinitionsRegistry,
+	type IActionDefinitionsRegistry,
+} from "./definition-registry.js";
 // biome-ignore lint/suspicious/noExplicitAny: <explanation>
 export type Context = any[];
 export type StructuredMsg = {
@@ -28,127 +38,121 @@ export type StructuredMsg = {
 	url: string;
 };
 
-export type FnArgs = Record<string, any>;
 export type DriverOpts = DebugOpts & {
 	definitions?: any[];
 };
 
 export interface IAgentDriver {
-	registerAction(action: IDriverAction, id?: string): void;
-	removeAction(id: string): void;
+	structuredMsg: StructuredMsg;
+	context?: any[];
+	message?: string;
+	setAiMessage(content: string): Promise<void>;
 	start(): Promise<void>;
 	closeBrowser(): void;
-	run(context: string[], response: HTTPResponse): Promise<void>;
-	doStep(
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		linksAndInputs: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		element: any,
-	): Promise<void>;
+	run(agentState: IAgentState): Promise<void>;
+	doStep(linksAndInputs: any, element: any): Promise<void>;
 	setMessage(msg: string): void;
 	addToMessage(message: string): void;
 	getInput(msg: string): Promise<string>;
+	getControllerResponse(
+		structuredMsg: StructuredMsg,
+		context: any,
+		actionConfig: any,
+	): Promise<any>;
 	page?: Page;
 	elementSelector: IElementSelector;
 	autopilot: boolean;
-	browser: IAgentBrowser;
+	noContent: boolean;
+	contextLengthLimit: number;
 	model: string;
 	definitions: any[];
+	actions: TActionStore;
 	setDefinitions(definitions: any[]): void;
+	addDefinition(definition: string): void;
 	addDefinitions(definitions: any[]): void;
-	inputController: IInputController;
+	printCurrentCost(): void;
 	log(msg: any): void;
-	messageSender: IMessageSender;
-	noContent: boolean;
+	browser: IAgentBrowser;
+	messageBroker: IMessageBroker;
+	inputController: IInputController;
+	messageBuilder: IMessageBuilder;
+}
+export interface IAgentState {
+	context: any[];
+	response: HTTPResponse;
 }
 
 export class AgentDriver implements IAgentDriver {
 	browser: AgentBrowser;
 	page?: Page;
 	message?: string;
-	contextLengthLimit = 4000;
-	chatMsg?: string;
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	fn?: any;
-	fnName = "";
-	fnArgs: FnArgs = {};
 	autopilot = false;
+	contextLengthLimit = 4000;
 	model = "gpt-3.5";
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	aiMsg?: any;
 	debug = false;
-	noContent = false;
+	agentState?: IAgentState;
 	nextStep: any;
-
-	context?: string[] = [];
+	context?: any[] = [];
 	elementSelector: IElementSelector;
 	messageBuilder: IMessageBuilder;
 	inputController: IInputController;
-	messageSender: IMessageSender;
+	messageBroker: IMessageBroker;
 
-	actions: Record<string, IDriverAction> = {};
-	pageScraper: IPageScraper;
-	definitions: any[];
+	stepRunner: IStepRunner;
+	costCalculator: ITokenCostCalculator;
+	actionsRegistry: IActionsRegistry;
+	actionDefinitionsRegistry: IActionDefinitionsRegistry;
 	opts: DriverOpts;
 
 	constructor(opts: DriverOpts = {}) {
 		this.opts = opts;
 		this.debug = Boolean(opts.debug);
 		this.browser = this.createAgentBrowser();
-		if (!this.page) {
-			throw new Error("No page");
-		}
-		this.definitions = opts.definitions || this.defaultDefinitions();
 		this.elementSelector = this.createElementSelector();
-		this.pageScraper = this.createPageScraper();
 		this.messageBuilder = this.createMessageBuilder();
-		this.messageSender = this.createMessageSender();
+		this.messageBroker = this.createMessageBroker();
 		this.inputController = this.createInputController();
+		this.stepRunner = this.createStepRunner();
+		this.costCalculator = this.createCostCalculator();
+		this.actionsRegistry = this.createActionRegistry();
+		this.actionDefinitionsRegistry = this.createActionDefinitionsRegistry();
+	}
+
+	set noContent(val: boolean) {
+		this.stepRunner.noContent = val;
+	}
+
+	get noContent() {
+		return this.stepRunner.noContent;
+	}
+
+	public get definitions() {
+		return this.actionDefinitionsRegistry.definitions;
+	}
+
+	public get actions() {
+		return this.actionsRegistry.actions;
 	}
 
 	public setDefinitions(definitions: any[]) {
-		this.definitions = definitions;
+		this.actionDefinitionsRegistry.setDefinitions(definitions);
 	}
 
-	public addDefinition(definition: any, overwrite = false) {
-		if (!definition) {
-			return;
-		}
-		if (Array.isArray(definition)) {
-			this.addDefinitions(definition, overwrite);
-			return;
-		}
-		this.addDefinitions([definition], overwrite);
+	public addDefinitions(definitions: any[]) {
+		this.actionDefinitionsRegistry.addDefinitions(definitions);
 	}
 
-	public addDefinitions(definitions: any[], overwrite = false) {
-		for (const definition of definitions) {
-			if (overwrite || !this.definitions.includes(definition)) {
-				this.definitions.push(definition);
-			}
-		}
+	public addDefinition(definition: any) {
+		this.actionDefinitionsRegistry.addDefinition(definition);
 	}
 
-	defaultDefinitions() {
-		return actionDefinitions;
+	protected createActionDefinitionsRegistry() {
+		return new ActionDefinitionsRegistry();
 	}
 
-	createDefaultInputReader() {
-		return {
-			question: async (text: string) => text,
-		};
-	}
-
-	public registerAction(action: IDriverAction, id?: string) {
-		const actionId = id || action.name;
-		this.actions[actionId] = action;
-		if (action.definition) {
-			this.addDefinition(action.definition);
-		}
-	}
-
-	public removeAction(id: string) {
-		delete this.actions[id];
+	protected createActionRegistry() {
+		return new ActionsRegistry(this);
 	}
 
 	public async start() {
@@ -156,11 +160,25 @@ export class AgentDriver implements IAgentDriver {
 		this.page = await this.openBrowserPage();
 	}
 
-	public async run(context: string[], response: HTTPResponse) {
-		this.context = context;
-		this.nextStep = response;
+	public async run(agentState: IAgentState) {
+		this.setState(agentState);
 		await this.doStep([]);
 		this.closeBrowser();
+	}
+
+	setState(agentState: IAgentState) {
+		this.agentState = agentState;
+		this.context = agentState.context;
+		this.nextStep = agentState.response;
+	}
+
+	async doStep(
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		linksAndInputs: any,
+		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+		element?: any,
+	) {
+		await this.stepRunner.run(linksAndInputs, element);
 	}
 
 	public closeBrowser() {
@@ -178,8 +196,18 @@ export class AgentDriver implements IAgentDriver {
 		this.log("initializing...");
 	}
 
-	protected createMessageSender() {
-		return new MessageSender(this, this.opts);
+	protected createDefaultInputReader() {
+		return {
+			question: async (text: string) => text,
+		};
+	}
+
+	protected createStepRunner() {
+		return new StepRunner(this, this.opts);
+	}
+
+	protected createMessageBroker() {
+		return new MessageBroker(this, this.opts);
 	}
 
 	protected createInputController() {
@@ -198,105 +226,20 @@ export class AgentDriver implements IAgentDriver {
 		return new AgentBrowser(this);
 	}
 
+	protected createCostCalculator() {
+		return new OpenAITokenCostCalculator(this);
+	}
+
 	protected async openBrowserPage() {
 		return await this.browser.start();
 	}
 
-	protected parseArgs() {
-		const fn = this.fn;
-		try {
-			return JSON.parse(fn.arguments);
-		} catch (e) {
-			if (this.fnName === "answer_user") {
-				return {
-					answer: fn.arguments,
-				};
-			}
-		}
-	}
-
-	protected handleAction(actionName: string) {
-		this.performAction(actionName) || this.defaultAction();
-	}
-
-	protected defaultAction() {
-		this.communicateMessage(
-			"That is an unregistered or invalid action. Please use a valid one",
-		);
-	}
-
-	protected findAction(id: string): IDriverAction {
-		const action = this.actions[id];
-		if (!action) {
-			throw new Error(`Action ${id} is not registered`);
-		}
-		return action;
-	}
-
-	protected performAction(actionId: string) {
-		try {
-			const action = this.findAction(actionId);
-			action.setState({ args: this.fnArgs, context: this.context });
-			action.execute();
-			return true;
-		} catch (err: any) {
-			this.log(err.message || `Action error ${actionId}`);
-			return false;
-		}
-	}
-
-	protected communicateMessage(msg: string) {
-		let message = msg;
-		message = message.substring(0, this.contextLengthLimit);
-		this.chatMsg = msg ?? {
-			role: "function",
-			name: this.fnName,
-			content: JSON.stringify({
-				status: "OK",
-				message: message,
-			}),
-		};
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	protected doStepAsFunction(nextStep: any) {
-		if (!this.isFunctionCallStep(nextStep)) {
-			return false;
-		}
-		this.setFunctionAttributes(nextStep);
-		this.performAction(this.fnName);
-	}
-
-	setFunctionAttributes(nextStep: any) {
-		this.fn = nextStep.function_call;
-		this.fnName = this.fn.name;
-		this.fnArgs = this.parseArgs();
-	}
-
-	isFunctionCallStep(step: any) {
-		return step.function_call;
-	}
-
-	protected printCurrentCost() {
-		// use OpenAI calculator class
+	public printCurrentCost() {
+		this.costCalculator.printCurrentCost();
 	}
 
 	protected get autopilotOn() {
 		return this.autopilot;
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	protected async doStepAsContent(nextStep: any) {
-		if (this.isFunctionCallStep(nextStep)) {
-			return;
-		}
-		this.printCurrentCost();
-		let nextContent = nextStep.content.trim();
-
-		if (nextContent === "") {
-			nextContent = "<empty response>";
-		}
-		await this.setAiMessage(nextContent);
 	}
 
 	protected async createMessage(content: string) {
@@ -321,110 +264,26 @@ export class AgentDriver implements IAgentDriver {
 		console.info("send", message);
 	}
 
-	public async doStep(
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		linksAndInputs: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		element?: any,
-	) {
-		this.noContent = false;
-		this.performStep(this.nextStep);
-		this.performInteraction();
-		this.logContext();
-		await this.doStep(linksAndInputs, element);
-	}
-
-	protected performStep(step: any) {
-		this.doStepAsFunction(step);
-		this.doStepAsContent(step);
-	}
-
-	protected async setAiMessage(nextContent: string) {
-		this.message = await this.createMessage(nextContent);
+	public async setAiMessage(content: string) {
+		this.message = await this.createMessage(content);
 		this.aiMsg = {
 			role: "user",
 			content: this.message,
 		};
 	}
 
-	protected createPageScraper() {
-		return new PageScraper(this);
-	}
-
-	protected logContext() {
-		if (!this.debug) {
-			return;
-		}
-		fs.writeFileSync("context.json", JSON.stringify(this.context, null, 2));
-	}
-
-	protected hasContent() {
-		return !this.noContent;
-	}
-
-	protected async getPageContent() {
-		if (!this.page) {
-			throw new Error("Missing page for scraping");
-		}
-		return await this.pageScraper.getPageContent(this.page);
-	}
-
-	protected addPageContent(pageContent: string) {
-		const content = `\n\n${pageContent.substring(0, this.contextLengthLimit)}`;
-		this.messageBuilder.addContent(content);
-	}
-
-	protected get msg(): StructuredMsg {
+	public get structuredMsg(): StructuredMsg {
 		return this.messageBuilder.message;
 	}
 
-	protected async performInteraction() {
-		this.ensurePageContent();
-		this.setPageUrl();
-		await this.getNextStep();
-		this.updateContext();
-	}
-
-	async ensurePageContent() {
-		if (!this.hasContent()) {
-			const pageContent = await this.getPageContent();
-			this.addPageContent(pageContent);
-		}
-	}
-
-	updateContext() {
-		this.addToContext(this.msg);
-		this.addToContext(this.nextStep);
-	}
-
-	async getNextStep() {
-		const response = await this.sendContextualMessage(this.msg, this.context);
-		this.messageBuilder.setContent(this.message);
-		this.nextStep = response;
-	}
-
-	async setPageUrl() {
-		const url = await this.getPageUrl();
-		url && this.messageBuilder.setUrl(url);
-	}
-
-	async getPageUrl() {
-		return await this.page?.url();
-	}
-
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	addToContext(data: any) {
-		this.context?.push(data);
-	}
-
-	async sendContextualMessage(
+	async getControllerResponse(
 		structuredMsg: StructuredMsg,
 		context: any,
 		actionConfig = {
 			name: "auto",
 		},
 	) {
-		await this.messageSender.sendMessageToController(
+		await this.messageBroker.getControllerResponse(
 			structuredMsg,
 			context,
 			actionConfig,

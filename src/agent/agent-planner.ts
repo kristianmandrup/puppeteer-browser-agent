@@ -3,9 +3,9 @@ import fs from "node:fs";
 import { AgentDriver, type IAgentDriver } from "./driver/agent-driver";
 import type { DebugOpts } from "../types";
 import {
-	type IMessageSender,
-	MessageSender,
-} from "./driver/message/message-sender";
+	type IMessageBroker,
+	MessageBroker,
+} from "./driver/message/message-broker";
 
 export type ActionConfig = {
 	name: string;
@@ -56,7 +56,7 @@ export class AgentPlanner implements IAgentPlanner {
 	msg = {};
 	acceptPlan?: boolean;
 	autopilot = false;
-	messageSender?: IMessageSender;
+	messageSender?: IMessageBroker;
 	model: string;
 	opts: PlannerOpts;
 
@@ -97,7 +97,7 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected createMessageSender() {
-		return new MessageSender(this.driver, this.opts);
+		return new MessageBroker(this.driver, this.opts);
 	}
 
 	protected createInitialContext() {

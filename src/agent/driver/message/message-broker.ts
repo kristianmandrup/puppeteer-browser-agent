@@ -27,8 +27,8 @@ export type ResponseData = {
 };
 
 // biome-ignore lint/style/useNamingConvention: <explanation>
-export interface IMessageSender {
-	sendMessageToController(
+export interface IMessageBroker {
+	getControllerResponse(
 		message: unknown,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		context: any,
@@ -36,9 +36,9 @@ export interface IMessageSender {
 	): Promise<unknown>;
 }
 
-export type MessageSenderOpts = DebugOpts;
+export type TBrokerOpts = DebugOpts;
 
-export class MessageSender implements IMessageSender {
+export class MessageBroker implements IMessageBroker {
 	debug: boolean;
 	messages: unknown[] = [];
 	tokenUsage: TokenUsage = {
@@ -55,7 +55,7 @@ export class MessageSender implements IMessageSender {
 	controller?: IAIController;
 	driver: IAgentDriver;
 
-	constructor(driver: IAgentDriver, opts: MessageSenderOpts = {}) {
+	constructor(driver: IAgentDriver, opts: TBrokerOpts = {}) {
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
 		this.driver = driver;
@@ -68,7 +68,7 @@ export class MessageSender implements IMessageSender {
 		return this.driver.definitions;
 	}
 
-	public async sendMessageToController(
+	public async getControllerResponse(
 		message: unknown,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 		context: any,

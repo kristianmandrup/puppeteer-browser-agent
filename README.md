@@ -28,32 +28,43 @@ The `run` method should implement the core logic which takes actions and perform
 
 The `run` method is configured to set the context, run `doStep` to perform the actions and when done close down the browser.
 
-`doStep` is configured to
+## StepRunner
 
-- perform the next step via puppeteer
-- perform any interaction with outside agents as a response to puppeteer actions
+The `doStep` function uses a `StepRunner` to run the actual step
+
+The `StepRunner` `run` method take the step, and a set of interactive elements.
+It is by default configured to do the following steps:
+
+- perform the step via puppeteer
+- perform interactions with outside agents (such as an AI) as a response to puppeteer actions
 - log the resulting context
 - perform the next step
 
-The step is a response from an external agent that is parsed.
+The step is a response from an external agent (such as an AI) that is parsed.
 If the response has the shape of a function, the function attributes such as function name and parameters are parsed. These will then be used attempt to call a registered action. Otherwise the response will be treated as content.
 
 ```ts
-this.noContent = false;
-this.performStep(this.nextStep);
+this.initState(step);
+this.performStep();
 this.performInteraction();
 this.logContext();
-await this.doStep(linksAndInputs, element);
+await this.run(step, linksAndInputs, element);
 ```
+
+## Step handlers
 
 The `performStep` logic is rather elegant and simple
 
 - Attempt to do the step as a function or as content
 
 ```ts
-this.doStepAsFunction(step);
-this.doStepAsContent(step);
+this.doStepAsFunction();
+this.doStepAsContent();
 ```
+
+For a function step, a `FunctionHandler` is invoked to handle the step. If the step is not a function but simply content, a `ContentHandler` is invoked.
+
+## Interactions with outside agents
 
 The `performInteraction` method does the following
 
