@@ -1,9 +1,9 @@
 import type { IDriverAction } from "../actions";
-import { BaseResponseHandler, type IBaseResponseHandler } from "./base-handler";
+import { BaseResponseHandler, type IResponseHandler } from "./base-handler";
 
 export type FnArgs = Record<string, any>;
 
-export interface IFunctionResponseHandler extends IBaseResponseHandler {}
+export interface IFunctionResponseHandler extends IResponseHandler {}
 
 export class FunctionResponseHandler
 	extends BaseResponseHandler

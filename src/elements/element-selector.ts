@@ -39,7 +39,6 @@ export class ElementSelector implements IElementSelector {
 				this.skipElement(element);
 				break;
 			}
-
 			const nextElem = await this.getNext(element, ++id, selector);
 			if (nextElem) {
 				this.selectElement(element);
@@ -60,7 +59,11 @@ export class ElementSelector implements IElementSelector {
 	}
 
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	protected async getNext(element: any, id: number, selector: string) {
+	protected async getNext(
+		element: ElementHandle<Element>,
+		id: number,
+		selector: string,
+	) {
 		return await this.interactiveElementHandler.nextInteractiveElement(
 			element,
 			id,

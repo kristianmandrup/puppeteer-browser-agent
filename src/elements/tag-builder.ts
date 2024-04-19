@@ -37,10 +37,14 @@ export class TagBuilder implements ITagBuilder {
 	initialize() {
 		const { element } = this;
 		this.tagName = element.name;
-		this.value = $(element).attr("value");
-		this.role = $(element).attr("role");
-		this.type = $(element).attr("type");
-		this.id = $(element).attr("pgpt-id");
+		this.value = this.getAttrValue("value");
+		this.role = this.getAttrValue("role");
+		this.type = this.getAttrValue("type");
+		this.id = this.getAttrValue("pgpt-id");
+	}
+
+	getAttrValue(name: string) {
+		return $(this.element).attr(name);
 	}
 
 	build(element: Element) {
@@ -112,7 +116,7 @@ export class TagBuilder implements ITagBuilder {
 
 	setPlaceholder() {
 		const element = this.element;
-		let placeholder = $(element).attr("placeholder");
+		let placeholder = this.getAttrValue("placeholder");
 
 		if (placeholder && placeholder.length > 32) {
 			placeholder = `${placeholder.substring(0, 32)}[..]`;
@@ -122,7 +126,7 @@ export class TagBuilder implements ITagBuilder {
 
 	setTitle() {
 		const element = this.element;
-		let title = $(element).attr("title");
+		let title = this.getAttrValue("title");
 		if (title && title.length > 32) {
 			title = `${title.substring(0, 32)}[..]`;
 		}
@@ -131,7 +135,7 @@ export class TagBuilder implements ITagBuilder {
 
 	setHref() {
 		const element = this.element;
-		let href = $(element).attr("href");
+		let href = this.getAttrValue("href");
 		if (href && href.length > 32) {
 			href = `${href.substring(0, 32)}[..]`;
 		}

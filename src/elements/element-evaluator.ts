@@ -2,10 +2,10 @@ import type { IAgentDriver } from "../agent";
 import type { DebugOpts } from "../types";
 
 export class ElementEvaluator {
-	element: Element;
+	element?: Element;
 	id: number;
 	selector: string;
-	role: string | null = "null";
+	role?: string | null = "null";
 	placeholder?: string;
 	textContent?: string;
 	type?: string;
@@ -15,10 +15,11 @@ export class ElementEvaluator {
 	driver: IAgentDriver;
 	debug: boolean;
 	opts: DebugOpts;
+	maxAttrLength = 32;
 
 	constructor(
 		driver: IAgentDriver,
-		element: Element,
+		element: any,
 		id: number,
 		selector: string,
 		opts: DebugOpts = {},
@@ -35,59 +36,67 @@ export class ElementEvaluator {
 		if (this.ignoreElement()) {
 			return;
 		}
-		this.element.classList.add(`pgpt-element${this.id}`);
+		this.configureElement();
 		return this.element;
 	}
 
-	configure() {
-		const element = this.element;
-		this.role = element.role;
+	protected configureElement() {
+		this.addMarkerClass();
+		this.externalRefElem();
+		this.elemRole();
+		this.formElement();
+		this.titledElement();
+		this.text();
 	}
 
-	titledElement() {
+	protected addMarkerClass() {
+		this.element?.classList.add(`pgpt-element${this.id}`);
+	}
+
+	protected elemRole() {
+		this.role = this.element?.role;
+	}
+
+	protected titledElement() {
 		const element = this.element as HTMLAnchorElement;
 		this.title = element.title;
 	}
 
-	externalRefElem() {
+	protected externalRefElem() {
 		const element = this.element as HTMLAnchorElement;
-		let href = element.href;
-
-		if (href && href.length > 32) {
-			// biome-ignore lint/style/useTemplate: <explanation>
-			href = href.substring(0, 32) + "[..]";
-		}
-		this.href = href;
+		this.href = this.sliceOff(element.href);
 	}
 
-	formElement() {
+	protected formElement() {
 		const element = this.element as HTMLFormElement;
-		let placeholder = element.placeholder;
+		const placeholder = element.placeholder;
 		this.type = element.type;
 		this.value = element.value;
-
-		if (placeholder && placeholder.length > 32) {
-			// biome-ignore lint/style/useTemplate: <explanation>
-			placeholder = placeholder.substring(0, 32) + "[..]";
-		}
-		this.placeholder = placeholder;
+		this.placeholder = this.sliceOff(placeholder);
 	}
 
-	text() {
-		let textContent = this.textContent;
+	protected text() {
+		const textContent = this.textContent;
 		let title = this.title;
-		if (!textContent && title && title.length > 32) {
-			title = `${title.substring(0, 32)}[..]`;
+		if (!textContent && title) {
+			title = this.sliceOff(title);
 		}
-		if (textContent && textContent.length > 200) {
-			textContent = `${textContent.substring(0, 200)}[..]`;
-		}
-		this.textContent = textContent;
+		this.textContent = this.sliceOff(textContent, 200);
 		this.title = title;
+	}
+
+	protected sliceOff(text?: string, length?: number) {
+		const maxLength = this.maxAttrLength || length || 32;
+		return text && text.length > maxLength
+			? `${text.substring(0, maxLength)}[..]`
+			: text;
 	}
 
 	ignoreElement() {
 		const element = this.element;
+		if (!element) {
+			throw new Error("Missing element");
+		}
 		if (!element.matches(this.selector)) {
 			return true;
 		}
@@ -97,10 +106,14 @@ export class ElementEvaluator {
 			return true;
 		}
 
-		const textContent = element.textContent?.replace(/\s+/g, " ").trim();
+		const textContent = this.trimWhiteSpaces(element.textContent);
 		if (textContent === "" && !element.matches("select, input, textarea")) {
 			return true;
 		}
 		return false;
+	}
+
+	trimWhiteSpaces(textContent: string | null) {
+		return textContent ? textContent?.replace(/\s+/g, " ").trim() : "";
 	}
 }

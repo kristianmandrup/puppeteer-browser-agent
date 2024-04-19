@@ -1,4 +1,4 @@
-import type { Page } from "puppeteer";
+import type { ElementHandle, Page } from "puppeteer";
 import { ElementEvaluator } from "./element-evaluator.js";
 import type { IAgentDriver } from "../agent/index.js";
 import type { DebugOpts } from "../types.js";
@@ -29,8 +29,11 @@ export class InteractiveElementHandler {
 		return new ElementEvaluator(this.driver, element, id, selector);
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	async nextInteractiveElement(element: any, id: number, selector = "*") {
+	async nextInteractiveElement(
+		element: ElementHandle<Element>,
+		id: number,
+		selector = "*",
+	) {
 		const { page } = this;
 		if (!page) {
 			throw new Error("Missing page");

@@ -1,7 +1,7 @@
 import type { DebugOpts } from "../../../types";
 import type { IAgentDriver } from "../agent-driver";
 
-export interface IBaseResponseHandler {
+export interface IResponseHandler {
 	step: any;
 	handle(step: any): Promise<void>;
 }
@@ -10,7 +10,7 @@ export type IResponseHandlerOpts = DebugOpts & {
 	//
 };
 
-export abstract class BaseResponseHandler implements IBaseResponseHandler {
+export abstract class BaseResponseHandler implements IResponseHandler {
 	step: any;
 	driver: IAgentDriver;
 	opts: IResponseHandlerOpts;

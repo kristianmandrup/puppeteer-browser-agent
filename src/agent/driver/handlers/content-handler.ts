@@ -1,6 +1,6 @@
-import { BaseResponseHandler, type IBaseResponseHandler } from "./base-handler";
+import { BaseResponseHandler, type IResponseHandler } from "./base-handler";
 
-export interface IContentResponseHandler extends IBaseResponseHandler {}
+export interface IContentResponseHandler extends IResponseHandler {}
 
 export class ContentResponseHandler extends BaseResponseHandler {
 	actionId?: string;

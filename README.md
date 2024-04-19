@@ -38,31 +38,32 @@ It is by default configured to do the following steps:
 - perform the step via puppeteer
 - perform interactions with outside agents (such as an AI) as a response to puppeteer actions
 - log the resulting context
-- perform the next step
+- perform the next step recursively
 
 The step is a response from an external agent (such as an AI) that is parsed.
 If the response has the shape of a function, the function attributes such as function name and parameters are parsed. These will then be used attempt to call a registered action. Otherwise the response will be treated as content.
 
 ```ts
 this.initState(step);
-this.performStep();
-this.performInteraction();
+await this.handleStep();
+await this.prepareNextStep();
 this.logContext();
-await this.run(step, linksAndInputs, element);
+await this.run(this.step);
 ```
 
 ## Step handlers
 
-The `performStep` logic is rather elegant and simple
-
-- Attempt to do the step as a function or as content
+The `handleStep` method iterates through the registered step handlers and executes each.
 
 ```ts
-this.doStepAsFunction();
-this.doStepAsContent();
+for await (const handler of this.handlers) {
+  await handler.handle(this.step);
+}
 ```
 
-For a function step, a `FunctionHandler` is invoked to handle the step. If the step is not a function but simply content, a `ContentHandler` is invoked.
+By default an instance of `FunctionHandler` and `ContentHandler` are registered.
+
+In case the response/step is aa `FunctionHandler` is invoked to handle the step. If the step is not a function but simply content, a `ContentHandler` is invoked to handle it.
 
 ## Interactions with outside agents
 

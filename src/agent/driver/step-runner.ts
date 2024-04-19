@@ -1,20 +1,20 @@
 import fs from "node:fs";
 import type { IAgentDriver, StructuredMsg } from "./agent-driver";
-import {
-	FunctionResponseHandler,
-	type IFunctionResponseHandler,
-} from "./handlers/function-handler";
-import {
-	ContentResponseHandler,
-	type IContentResponseHandler,
-} from "./handlers/content-handler";
+import { FunctionResponseHandler } from "./handlers/function-handler";
+import { ContentResponseHandler } from "./handlers/content-handler";
 import type { DebugOpts } from "../../types";
 import { PageScraper, type IPageScraper } from "./document";
+import type { IResponseHandler } from "./handlers/base-handler";
+import type { ElementHandle } from "puppeteer";
 
 export interface IStepRunner {
 	// noContent: boolean;
 	run(linksAndInputs: any, element?: any): Promise<void>;
 	noContent: boolean;
+	element?: ElementHandle<Element>;
+	linksAndInputs: ElementHandle<Element>[];
+	clearHandlers(): void;
+	registerHandler(handler: IResponseHandler): void;
 }
 
 export type IStepRunnerOpts = DebugOpts & {
@@ -23,21 +23,42 @@ export type IStepRunnerOpts = DebugOpts & {
 
 export class StepRunner {
 	step: any;
+	element?: ElementHandle<Element>;
+	linksAndInputs: ElementHandle<Element>[] = [];
 	driver: IAgentDriver;
 	debug = false;
 	opts: IStepRunnerOpts;
 	noContent = false;
-	functionHandler: IFunctionResponseHandler;
-	contentHandler: IContentResponseHandler;
+	handlers: IResponseHandler[] = [];
 	pageScraper: IPageScraper;
+	domElement?: Element;
 
 	constructor(driver: IAgentDriver, opts: IStepRunnerOpts = {}) {
 		this.driver = driver;
 		this.opts = opts;
 		this.debug = Boolean(opts.debug);
-		this.functionHandler = this.createFunctionHandler();
-		this.contentHandler = this.createContentHandler();
+		this.handlers = this.defaultHandlers();
 		this.pageScraper = this.createPageScraper();
+	}
+
+	public clearHandlers() {
+		this.handlers = [];
+	}
+
+	public registerHandler(handler: IResponseHandler) {
+		this.handlers.push(handler);
+	}
+
+	public async run(step: any) {
+		this.initState(step);
+		await this.handleStep();
+		await this.prepareNextStep();
+		this.logContext();
+		await this.run(this.step);
+	}
+
+	protected defaultHandlers() {
+		return [this.createFunctionHandler(), this.createContentHandler()];
 	}
 
 	protected createPageScraper() {
@@ -52,21 +73,7 @@ export class StepRunner {
 		return new ContentResponseHandler(this.driver, this.opts);
 	}
 
-	public async run(
-		step: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		linksAndInputs: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		element?: any,
-	) {
-		this.initState(step);
-		this.performStep();
-		this.performInteraction();
-		this.logContext();
-		await this.run(step, linksAndInputs, element);
-	}
-
-	get context() {
+	protected get context() {
 		return this.driver.context;
 	}
 
@@ -82,22 +89,19 @@ export class StepRunner {
 		this.noContent = false;
 	}
 
-	protected async performStep() {
-		await this.doStepAsFunction();
-		this.doStepAsContent();
+	protected async handleStep() {
+		for await (const handler of this.handlers) {
+			await handler.handle(this.step);
+		}
 	}
 
-	protected async doStepAsFunction() {
-		await this.functionHandler.handle(this.step);
+	protected async getPageData() {
+		await this.ensurePageContent();
+		await this.setPageUrl();
 	}
 
-	protected async doStepAsContent() {
-		await this.contentHandler.handle(this.step);
-	}
-
-	protected async performInteraction() {
-		this.ensurePageContent();
-		this.setPageUrl();
+	protected async prepareNextStep() {
+		await this.getPageData();
 		await this.getNextStep();
 		this.updateContext();
 	}
@@ -120,11 +124,11 @@ export class StepRunner {
 		return await this.pageScraper.getPageContent(this.page);
 	}
 
-	get page() {
+	protected get page() {
 		return this.driver.page;
 	}
 
-	get messageBuilder() {
+	protected get messageBuilder() {
 		return this.driver.messageBuilder;
 	}
 

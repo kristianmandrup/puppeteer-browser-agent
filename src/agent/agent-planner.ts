@@ -1,12 +1,11 @@
 import type { HTTPResponse } from "puppeteer";
 import fs from "node:fs";
-import { AgentDriver, type IAgentDriver } from "./driver/agent-driver";
-import type { DebugOpts } from "../types";
 import {
-	type IMessageBroker,
-	MessageBroker,
-} from "./driver/message/message-broker";
-
+	AgentDriver,
+	type IAgentState,
+	type IAgentDriver,
+} from "./driver/agent-driver";
+import type { DebugOpts } from "../types";
 export type ActionConfig = {
 	name: string;
 	arguments?: string[];
@@ -46,18 +45,13 @@ export interface IAgentPlanner {
 export class AgentPlanner implements IAgentPlanner {
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
 	context: any[];
-	// agent response?
 	aiAgentResponse?: any;
 	assignedMsg?: AssignedMsg;
 	promptMessage?: string;
 	promptText?: string;
 	driver: IAgentDriver;
 	debug: boolean;
-	msg = {};
 	acceptPlan?: boolean;
-	autopilot = false;
-	messageSender?: IMessageBroker;
-	model: string;
 	opts: PlannerOpts;
 
 	constructor(context: any, opts: PlannerOpts = {}) {
@@ -65,10 +59,11 @@ export class AgentPlanner implements IAgentPlanner {
 		this.opts = opts;
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
-		this.model = opts.model || "gpt-3.5";
 		this.driver = this.createDriver();
-		this.messageSender =
-			this.driver.messageSender || this.createMessageSender();
+	}
+
+	get messageBroker() {
+		return this.driver.messageBroker;
 	}
 
 	public get definitions() {
@@ -83,21 +78,21 @@ export class AgentPlanner implements IAgentPlanner {
 		this.driver.addDefinitions(definitions);
 	}
 
+	get structuredMsg() {
+		return this.driver.structuredMsg;
+	}
+
 	public async runPlan() {
 		// from ai agent
 		this.aiAgentResponse = await this.getAgentResponse();
 
-		this.addMessageToContext(this.msg);
+		this.addMessageToContext(this.structuredMsg);
 		this.addResponseToContext(this.aiAgentResponse);
 		this.logContext();
 
 		const args = JSON.parse(this.aiAgentResponse.function_call.arguments);
 		this.handleArgs(args);
 		await this.handleAcceptPlan;
-	}
-
-	protected createMessageSender() {
-		return new MessageBroker(this.driver, this.opts);
 	}
 
 	protected createInitialContext() {
@@ -120,7 +115,11 @@ export class AgentPlanner implements IAgentPlanner {
 		}
 
 		await this.startDriver();
-		await this.driver?.run(this.context, this.aiAgentResponse);
+		const agentState: IAgentState = {
+			context: this.context,
+			response: this.aiAgentResponse,
+		};
+		await this.driver?.run(agentState);
 
 		this.browser?.close();
 	}
@@ -163,15 +162,19 @@ export class AgentPlanner implements IAgentPlanner {
 		};
 
 		// See: sendMessageToController
-		return await this.sendMessageToController(
-			this.msg,
+		return await this.getControllerResponse(
+			this.structuredMsg,
 			this.context,
 			actionConfig,
 		);
 	}
 
-	protected sendMessageToController(msg: any, context: any, actionConfig: any) {
-		this.messageSender?.sendMessageToController(msg, context, actionConfig);
+	protected async getControllerResponse(
+		msg: any,
+		context: any,
+		actionConfig: any,
+	) {
+		await this.messageBroker.getControllerResponse(msg, context, actionConfig);
 	}
 
 	protected async handleAcceptPlan() {
@@ -186,7 +189,7 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected autoAccept() {
-		return this.autopilot;
+		return this.driver.autopilot;
 	}
 
 	protected async getInput(prompt: string) {

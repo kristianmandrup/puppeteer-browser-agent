@@ -1,4 +1,4 @@
-import type { HTTPResponse, Page } from "puppeteer";
+import type { ElementHandle, HTTPResponse, Page } from "puppeteer";
 import { AgentBrowser, type IAgentBrowser } from "../agent-browser.js";
 import {
 	ElementSelector,
@@ -76,6 +76,9 @@ export interface IAgentDriver {
 	messageBroker: IMessageBroker;
 	inputController: IInputController;
 	messageBuilder: IMessageBuilder;
+	element?: ElementHandle<Element>;
+	setLinksAndInputs(elements: ElementHandle<Element>[]): void;
+	setNoContent(val: boolean): void;
 }
 export interface IAgentState {
 	context: any[];
@@ -119,7 +122,19 @@ export class AgentDriver implements IAgentDriver {
 		this.actionDefinitionsRegistry = this.createActionDefinitionsRegistry();
 	}
 
-	set noContent(val: boolean) {
+	get element() {
+		return this.stepRunner.element;
+	}
+
+	setLinksAndInputs(elements: ElementHandle<Element>[]) {
+		this.stepRunner.linksAndInputs = elements;
+	}
+
+	get linksAndInputs() {
+		return this.stepRunner.linksAndInputs;
+	}
+
+	setNoContent(val: boolean) {
 		this.stepRunner.noContent = val;
 	}
 

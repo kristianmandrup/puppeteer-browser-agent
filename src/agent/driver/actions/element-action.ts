@@ -1,3 +1,4 @@
+import type { ElementHandle } from "puppeteer";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 
 export abstract class ElementAction
@@ -13,5 +14,13 @@ export abstract class ElementAction
 
 	protected get elementSelector() {
 		return this.driver.elementSelector;
+	}
+
+	protected set element(elem: ElementHandle<Element>) {
+		this.driver.element = elem;
+	}
+
+	protected get element(): ElementHandle<Element> | undefined {
+		return this.driver.element;
 	}
 }

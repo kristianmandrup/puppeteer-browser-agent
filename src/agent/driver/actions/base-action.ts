@@ -1,5 +1,6 @@
-import type { Context, FnArgs, IAgentDriver } from "../agent-driver";
+import type { Context, IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
+import type { FnArgs } from "../handlers/function-handler";
 
 export interface IDriverAction {
 	execute(): Promise<void>;

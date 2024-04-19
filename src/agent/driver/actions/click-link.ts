@@ -145,7 +145,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	}
 
 	set noContent(val: boolean) {
-		this.driver.noContent = val;
+		this.driver.setNoContent(val);
 	}
 
 	get noContent() {

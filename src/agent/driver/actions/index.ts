@@ -5,3 +5,7 @@ export * from "./goto-url";
 export * from "./read-file";
 export * from "./receive-input";
 export * from "./enter-data";
+export * from "./navigation-outline";
+export * from "./section-outline";
+export * from "./summary";
+export * from "./take-screenshot";

@@ -1,7 +1,7 @@
 import type { ElementHandle } from "puppeteer";
 import type { IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
-import type { FnArgs, IAgentDriver } from "../agent-driver";
+import type { IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 import { ElementAction } from "./element-action";
 
@@ -13,7 +13,7 @@ export class EnterDataFormAction
 {
 	formData: any;
 	prevInput: any;
-	linksAndInputs: ElementHandle<Element>[] = [];
+	// linksAndInputs: ElementHandle<Element>[] = [];
 	navigator: IPageNavigator;
 	taskName = "enter_data";
 
@@ -31,7 +31,7 @@ export class EnterDataFormAction
 	}
 
 	async getElementAttr(element: ElementHandle<Element>, attrName: string) {
-		return await element.evaluate((el) => {
+		return await element.evaluate((el: Element) => {
 			const val = el.getAttribute(attrName);
 			return val ?? "";
 		});
@@ -46,7 +46,7 @@ export class EnterDataFormAction
 	}
 
 	async getElementTagName(element: ElementHandle<Element>) {
-		return await element.evaluate((el) => {
+		return await element.evaluate((el: Element) => {
 			return el.tagName;
 		});
 	}
@@ -69,21 +69,35 @@ export class EnterDataFormAction
 		this.addToMessage(`Typed "${text}" to input field "${name}"\n`);
 	}
 
+	pgptElementSelectorFor(id: string) {
+		return `.pgpt-element${id}`;
+	}
+
+	async getPgptElementById(id: string) {
+		const selector = this.pgptElementSelectorFor(id);
+		return await this.selectElement(selector);
+	}
+
+	setElement(element: ElementHandle<Element>) {
+		this.element = element;
+	}
+
 	public async execute() {
 		const { fnArgs } = this;
 		this.formData = fnArgs.form_data;
 
 		for (const data of this.formData) {
-			const elementId = data.pgpt_id;
+			const id = data.pgpt_id;
 
 			this.resetMessage();
 
 			try {
-				const elementCssSelector = `.pgpt-element${elementId}`;
-				const element = await this.selectElement(elementCssSelector);
+				const selector = this.pgptElementSelectorFor(id);
+				const element = await this.selectElement(selector);
 				if (!element) {
-					throw new Error(`No such element on page: ${elementCssSelector}`);
+					throw new Error(`No such element on page: ${selector}`);
 				}
+				this.setElement(element);
 				if (!this.prevInput) {
 					this.prevInput = element;
 				}
@@ -119,22 +133,32 @@ export class EnterDataFormAction
 		this.log(`${this.taskPrefix}Submitting form`);
 
 		try {
-			const form = await this.prevInput.evaluateHandle((input: any) =>
-				input.closest("form"),
-			);
-
-			await form.evaluate((form: any) => form.submit());
-			await this.waitForNavigation();
-
-			const url = await this.page?.url();
-
+			this.handleForm();
+			const url = this.getPageUrl();
 			this.addToMessage(`Form sent! You are now on ${url}\n`);
 		} catch (error) {
 			this.onSubmitFormError(error);
 		}
 
 		this.log(`${this.taskPrefix}Scraping page...`);
-		this.linksAndInputs = await this.getTabbableElements();
+		this.setLinksAndInputs(await this.getTabbableElements());
+	}
+
+	setLinksAndInputs(elements: ElementHandle<Element>[]) {
+		this.driver.setLinksAndInputs(elements);
+	}
+
+	async getPageUrl() {
+		return await this.page?.url();
+	}
+
+	async handleForm() {
+		const form = await this.prevInput.evaluateHandle((input: any) =>
+			input.closest("form"),
+		);
+
+		await form.evaluate((form: any) => form.submit());
+		await this.waitForNavigation();
 	}
 
 	onSubmitFormError(error: any) {
