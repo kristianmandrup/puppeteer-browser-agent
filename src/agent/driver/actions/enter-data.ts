@@ -7,6 +7,12 @@ import { ElementAction } from "./element-action";
 
 export interface IEnterDataAction extends IDriverAction {}
 
+export type TSelectAttrs = {
+	multiple: boolean;
+	options: HTMLOptionsCollection;
+	selectedIndex: number;
+	selectedOptions: HTMLCollectionOf<HTMLOptionElement>;
+};
 export interface IElementDetails {
 	type: string;
 	tagName: string;
@@ -41,16 +47,19 @@ export class EnterDataFormAction
 		});
 	}
 
+	async getSelectElementAttr(element: ElementHandle<Element>) {
+		return await element.evaluate((el: Element) => {
+			const sel = el as HTMLSelectElement;
+			const opts = sel.options;
+			const selectedIndex = sel.selectedIndex;
+			const selectedOptions = sel.selectedOptions;
+			const multiple = sel.multiple;
+			return { options: opts, selectedIndex, selectedOptions, multiple };
+		});
+	}
+
 	async getElementChecked(element: ElementHandle<Element>) {
 		return await this.getElementAttr(element, "checked");
-	}
-
-	async getElementSelectedIndex(element: ElementHandle<Element>) {
-		return await this.getElementAttr(element, "selectedIndex");
-	}
-
-	async getElementSelectedOptions(element: ElementHandle<Element>) {
-		return await this.getElementAttr(element, "selectedOptions");
 	}
 
 	async getElementType(element: ElementHandle<Element>) {
@@ -75,51 +84,106 @@ export class EnterDataFormAction
 		return false;
 	}
 
+	async onTextInputField(
+		element: ElementHandle,
+		{ type }: IElementDetails,
+		data: any,
+	) {
+		if (type === "input") {
+			await this.typeTextIn(element, data);
+		}
+	}
+
+	protected hasMatchingOption(options: HTMLOptionsCollection, data: any) {
+		return Array.from(options).find(
+			(opt: HTMLOptionElement) => opt.label === data.text,
+		);
+	}
+
+	async onSelectField(
+		element: ElementHandle,
+		{ tagName }: IElementDetails,
+		data: any,
+	) {
+		if (tagName !== "SELECT") {
+			return;
+		}
+		const sel: TSelectAttrs = await this.getSelectElementAttr(element);
+		if (this.hasMatchingOption(sel.options, data)) {
+			await this.selectOptionsOn(element, sel, data);
+		}
+	}
+
+	isRadioField({ type, tagName }: IElementDetails) {
+		return tagName === "INPUT" && type === "radio";
+	}
+
+	async onRadioField(
+		element: ElementHandle,
+		elemDetails: IElementDetails,
+		data: any,
+	) {
+		if (!this.isRadioField(elemDetails)) {
+			return;
+		}
+		const checked = await this.getElementChecked(element);
+		await this.checkRadioOn(element, Boolean(checked), data);
+	}
+
 	async onFormField(
 		element: ElementHandle,
 		elemDetails: IElementDetails,
 		data: any,
 	) {
-		const { tagName, type } = elemDetails;
-		if (type === "input") {
-			await this.onInputField(element, data);
-		}
-		if (tagName === "SELECT") {
-			const selectedIndex = await this.getElementSelectedIndex(element);
-			const selectedOptions = await this.getElementSelectedOptions(element);
-			const sel = {
-				selectedIndex,
-				selectedOptions,
-			};
-
-			await this.onSelector(element, sel, data);
-		}
-
-		if (type === "radio") {
-			const checked = await this.getElementChecked(element);
-			await this.onRadio(element, Boolean(checked), data);
-		}
+		await this.onTextInputField(element, elemDetails, data);
+		await this.onSelectField(element, elemDetails, data);
+		await this.onRadioField(element, elemDetails, data);
 	}
 
-	async onRadio(element: ElementHandle, checked: boolean, data: any) {
+	get checkAnswers() {
+		return ["yes", "y", "check", "x"];
+	}
+
+	get uncheckAnswers() {
+		return ["no", "n", "uncheck"];
+	}
+
+	async checkRadioOn(element: ElementHandle, checked: boolean, data: any) {
 		const text = data.text;
-		const checkAnswers = ["yes", "y"];
-		const uncheckAnswers = ["no", "n"];
-		if (!checked && checkAnswers.includes(text)) {
+		if (!checked && this.checkAnswers.includes(text)) {
 			await element.click();
 		}
-		if (checked && uncheckAnswers.includes(text)) {
+		if (checked && this.uncheckAnswers.includes(text)) {
 			await element.click();
 		}
 	}
 
-	// TODO: handle pre-selected options
-	async onSelector(element: ElementHandle, _select: any, data: any) {
+	unselectSelected(select: TSelectAttrs) {
+		if (!select.multiple) {
+			return;
+		}
+		for (const opt of Array.from(select.selectedOptions)) {
+			opt.selected = false;
+		}
+	}
+
+	async selectOptionsOn(
+		element: ElementHandle,
+		select: TSelectAttrs,
+		data: any,
+	) {
+		if (select.multiple) {
+			const options = data.text.split(",");
+			for (const opt of options) {
+				await element.select(opt);
+			}
+			return;
+		}
 		const text = data.text;
 		await element.select(text);
 	}
 
-	async onInputField(element: ElementHandle, data: any) {
+	async typeTextIn(element: ElementHandle, data: any) {
 		const name = this.getElementName(element);
 		const text = data.text;
 		this.prevInput = element;
