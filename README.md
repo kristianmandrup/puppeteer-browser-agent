@@ -1,6 +1,6 @@
 # Puppeteer Browser Agent
 
-A library with convenient building blocks to be used for creating a Puppeteer browser agent that can communicate with external actors, agents and users to instruct the agent to take browser actions accordingly to fulfill an objective.
+This library consists of a number of convenient building blocks that can be extended and assembled to create a Puppeteer browser agent. This browser agent can communicate with external actors, agents and users to instruct the browser agent to take browser actions to fulfill objectives accordinly.
 
 ## Inspiration
 
@@ -17,43 +17,106 @@ npm i puppeteer-browser-agent
 The implementation is in Typescript and is best used in this environment.
 
 First write an implementation of `IAgentPlanner` or extend the built-in `AgentPlanner` class.
-This class needs to have at least an async `runPlan` method which runs the overall agent plan.
+The `IAgentPlanner` implementation needs to have a an async `start` method which starts the plan.
+
+By default it will ask an internal agent (such as a user or AI agent) to accept the plan. When the plan has been accepted it runs the plan via `runPlan` and when completed it calls `onPlanCompleted` which cleans up resources, such as closing the browser.
+
+```ts
+public async start() {
+	this.preparePlanPrompt();
+	while (!this.isPlanAccepted()) {
+		await this.askForPlanAcceptance();
+	}
+	await this.runPlan();
+	this.onPlanCompleted();
+}
+```
 
 The `AgentPlanner` can use the `AgentDriver` to implement an agent driving the browser via puppeteer.
 
 The `AgentDriver` must implement `IAgentDriver` by supplying the async methods `start` and `run`.
 
 The `start` method should start the browser and do any initialization necessary.
+
+```ts
+public async start() {
+	this.initialize();
+	await this.openBrowserPage();
+}
+```
+
 The `run` method should implement the core logic which takes actions and performs them via the browser.
 
 The `run` method is configured to set the context, run `doStep` to perform the actions and when done close down the browser.
 
+```ts
+public async run(agentState: IAgentState) {
+	this.prepareStep(agentState);
+	await this.doStep();
+	this.onStepDone();
+}
+```
+
+The `doStep` method performs the actions based on the response received from the external agent, using a `StepRunner` (see below), calling `stepRunner.run` with the response.
+
+```ts
+protected async doStep() {
+	await this.stepRunner.run(this.response);
+}
+```
+
 ## StepRunner
 
-The `doStep` function uses a `StepRunner` to run the actual step
+The `StepRunner` `run` method takes the response which contains step instructions.
+`run` is by default configured to do the following:
 
-The `StepRunner` `run` method take the step, and a set of interactive elements.
-It is by default configured to do the following steps:
-
-- perform the step via puppeteer
-- perform interactions with outside agents (such as an AI) as a response to puppeteer actions
+- handle the step via an appropriate handler
+- prepare the next step
 - log the resulting context
 - perform the next step recursively
 
-The step is a response from an external agent (such as an AI) that is parsed.
-If the response has the shape of a function, the function attributes such as function name and parameters are parsed. These will then be used attempt to call a registered action. Otherwise the response will be treated as content.
+The `step` is the response from an external agent (such as an AI) that is parsed to determine which handler to process it.
 
 ```ts
-this.initState(step);
-await this.handleStep();
-await this.prepareNextStep();
-this.logContext();
-await this.run(this.step);
+public async run(step: any) {
+	this.initState(step);
+	await this.handleStep();
+	await this.prepareNextStep();
+	this.logContext();
+	await this.doNextStep();
+}
+```
+
+Preparing for the next step requires the following:
+
+- retrieve page data
+- get next step instructions from external agent
+- update response and step context
+
+```ts
+protected async prepareNextStep() {
+	await this.getPageData();
+	await this.getNextStep();
+	this.updateContext();
+}
+```
+
+Getting the next step (response) is done by calling `getControllerResponse` which passes a structured message to a `MessageBroker` instance which communicates with the external agent responsible for generating the response that forms the step.
+
+```ts
+protected async getNextStep() {
+	const response = await this.getControllerResponse(
+		this.structuredMsg,
+		this.context,
+	);
+	this.messageBuilder.setContent(this.message);
+	this.step = response;
+}
 ```
 
 ## Step handlers
 
-The `handleStep` method iterates through the registered step handlers and executes each.
+The `handleStep` method iterates through the registered step handlers and executes each handler via their `handle` method, passing the `step` to be processed.
 
 ```ts
 for await (const handler of this.handlers) {
@@ -61,9 +124,13 @@ for await (const handler of this.handlers) {
 }
 ```
 
-By default an instance of `FunctionHandler` and `ContentHandler` are registered.
+By default an instance of `FunctionHandler` and `ContentHandler` are registered. You can register specialized handlers on the step runner as needed, via the `registerHandler` method and clear the default handler registry via `clearHandlers`
 
-In case the response/step is aa `FunctionHandler` is invoked to handle the step. If the step is not a function but simply content, a `ContentHandler` is invoked to handle it.
+In case the response/step is a function, a `FunctionHandler` is invoked to handle the step. If the step is not a function, a `ContentHandler` is invoked to handle it.
+
+If the response has the shape of a function, the function attributes such as function `name` and `parameters` are parsed. These will be used attempt to call a registered action.
+
+If the the response does not look like a function, the content handler will be called.
 
 ## Interactions with outside agents
 
@@ -91,15 +158,15 @@ The library comes with a set of basic actions that can be used as starting point
 
 These actions are:
 
-- `GotoUrlAction` implementing `IGotoUrlAction` to goto a given URL page
-- `ClickLinkAction` implementing `IClickLinkAction` to click page links
-- `ReadFileAction` implementing `IReadFileAction` to read a file for instructions
-- `ReceiveInputAction` implementing `IReceiveInputAction` for user/agent input to instruct driver for decisions and actions
-- `EnterDataAction` implementing `IEnterDataAction` to enter data into form fields and submit forms
+- `GotoUrlAction` to goto a given URL page
+- `ClickLinkAction` to click page links
+- `ReadFileAction` to read a file for instructions
+- `ReceiveInputAction` for user/agent input to instruct driver for decisions and actions
+- `EnterDataAction` to enter data into form fields and (optionally) submit the form
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
 
-In addition, a number of actions are left as placeholders and have yet to be implemented
+A number of actions are left as placeholders and have yet to be implemented
 
 - `CodeSampleAction`
 - `PageNavigationOutlineAction`
@@ -109,7 +176,7 @@ In addition, a number of actions are left as placeholders and have yet to be imp
 
 Any action must have an async `execute` function which performs the given action.
 
-Action classes can extend either of the abstract classes `BaseDriverAction` or `ElementAction`. `ElementAction` is useful for actions that directly interact with page elements, whereas `BaseDriverAction` is for more general actions that do not interact with page elements.
+Action classes can extend either of the abstract classes `BaseDriverAction` or `ElementAction`, where `ElementAction` is useful for actions that directly interact with page elements, whereas `BaseDriverAction` is for more general actions, that do not interact with the page.
 
 ## Action definitions
 
@@ -169,7 +236,7 @@ Any actions may include a `definition` property as well. If such a property exis
 
 ## Custom implementation example
 
-A custom implementation would look like the following snippet, where factory methods in each custom class can be used to wire the implementation as needed.
+A custom browser agent implementation could look something like the following code snippet, where factory methods in each custom class can be used to wire the implementation as needed.
 
 ```ts
 export class MyAgentPlanner extends AgentPlanner {
@@ -179,8 +246,8 @@ export class MyAgentPlanner extends AgentPlanner {
     this.driver = new MyAgentDriver(this, this.opts);
   }
 
-  protected createMessageSender() {
-    return new MyMessageSender(this.driver);
+  protected createMessageBroker() {
+    return new MyMessageBroker(this.driver);
   }
 }
 

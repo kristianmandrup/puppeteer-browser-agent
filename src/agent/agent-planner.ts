@@ -36,7 +36,7 @@ export type PlannerOpts = DebugOpts & {
 };
 
 export interface IAgentPlanner {
-	runPlan(): Promise<void>;
+	askForPlanAcceptance(): Promise<void>;
 	definitions: any[];
 	setDefinitions(definitions: any[]): void;
 	addDefinitions(definitions: any[]): void;
@@ -53,6 +53,7 @@ export class AgentPlanner implements IAgentPlanner {
 	debug: boolean;
 	acceptPlan?: boolean;
 	opts: PlannerOpts;
+	agentState?: IAgentState;
 
 	constructor(context: any, opts: PlannerOpts = {}) {
 		this.context = context || this.createInitialContext();
@@ -78,11 +79,21 @@ export class AgentPlanner implements IAgentPlanner {
 		this.driver.addDefinitions(definitions);
 	}
 
-	get structuredMsg() {
-		return this.driver.structuredMsg;
+	public async start() {
+		this.preparePlanPrompt();
+		while (!this.isPlanAccepted()) {
+			await this.askForPlanAcceptance();
+		}
+		await this.runPlan();
+		this.onPlanCompleted();
 	}
 
 	public async runPlan() {
+		await this.startDriver();
+		await this.runDriver();
+	}
+
+	public async askForPlanAcceptance() {
 		// from ai agent
 		this.aiAgentResponse = await this.getAgentResponse();
 
@@ -90,9 +101,21 @@ export class AgentPlanner implements IAgentPlanner {
 		this.addResponseToContext(this.aiAgentResponse);
 		this.logContext();
 
-		const args = JSON.parse(this.aiAgentResponse.function_call.arguments);
+		const args = this.parseResponseArgs();
 		this.handleArgs(args);
 		await this.handleAcceptPlan;
+	}
+
+	protected onPlanCompleted() {
+		this.closeBrowser();
+	}
+
+	protected get structuredMsg() {
+		return this.driver.structuredMsg;
+	}
+
+	protected parseResponseArgs() {
+		return JSON.parse(this.aiAgentResponse.function_call.arguments);
 	}
 
 	protected createInitialContext() {
@@ -103,25 +126,29 @@ export class AgentPlanner implements IAgentPlanner {
 		return Boolean(this.acceptPlan);
 	}
 
-	public async start() {
+	protected closeBrowser() {
+		this.browser?.close();
+	}
+
+	protected prepareAgentState() {
+		return {
+			context: this.context,
+			response: this.aiAgentResponse,
+		};
+	}
+
+	protected async runDriver() {
+		const agentState = this.prepareAgentState();
+		this.agentState = agentState;
+		await this.driver?.run(agentState);
+	}
+
+	protected preparePlanPrompt() {
 		this.promptMessage = `Task: ${this.promptText}.`;
 		this.assignedMsg = {
 			role: "user",
 			content: this.promptMessage,
 		};
-
-		while (this.isPlanAccepted()) {
-			await this.runPlan();
-		}
-
-		await this.startDriver();
-		const agentState: IAgentState = {
-			context: this.context,
-			response: this.aiAgentResponse,
-		};
-		await this.driver?.run(agentState);
-
-		this.browser?.close();
 	}
 
 	protected createDriver() {
@@ -156,17 +183,19 @@ export class AgentPlanner implements IAgentPlanner {
 	}
 
 	protected async getAgentResponse() {
-		const actionConfig: ActionConfig = {
-			name: "make_plan",
-			arguments: ["plan"],
-		};
-
-		// See: sendMessageToController
+		const actionConfig = this.createActionConfig();
 		return await this.getControllerResponse(
 			this.structuredMsg,
 			this.context,
 			actionConfig,
 		);
+	}
+
+	createActionConfig() {
+		return {
+			name: "make_plan",
+			arguments: ["plan"],
+		};
 	}
 
 	protected async getControllerResponse(

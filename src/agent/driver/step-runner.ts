@@ -158,7 +158,7 @@ export class StepRunner {
 		return this.driver.message;
 	}
 
-	async getNextStep() {
+	protected async getNextStep() {
 		const response = await this.getControllerResponse(
 			this.structuredMsg,
 			this.context,

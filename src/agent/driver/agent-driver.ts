@@ -162,38 +162,18 @@ export class AgentDriver implements IAgentDriver {
 		this.actionDefinitionsRegistry.addDefinition(definition);
 	}
 
-	protected createActionDefinitionsRegistry() {
-		return new ActionDefinitionsRegistry();
-	}
-
-	protected createActionRegistry() {
-		return new ActionsRegistry(this);
-	}
-
 	public async start() {
-		this.initialize();
-		this.page = await this.openBrowserPage();
+		await this.initialize();
 	}
 
 	public async run(agentState: IAgentState) {
-		this.setState(agentState);
-		await this.doStep([]);
-		this.closeBrowser();
+		this.prepareStep(agentState);
+		await this.doStep();
+		this.onStepDone();
 	}
 
-	setState(agentState: IAgentState) {
-		this.agentState = agentState;
-		this.context = agentState.context;
-		this.nextStep = agentState.response;
-	}
-
-	async doStep(
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		linksAndInputs: any,
-		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		element?: any,
-	) {
-		await this.stepRunner.run(this.agentState?.response);
+	public async doStep() {
+		await this.stepRunner.run(this.response);
 	}
 
 	public closeBrowser() {
@@ -207,8 +187,35 @@ export class AgentDriver implements IAgentDriver {
 		console.info(msg);
 	}
 
-	protected initialize() {
+	protected prepareStep(agentState: IAgentState) {
+		this.setState(agentState);
+	}
+
+	protected onStepDone() {
+		this.closeBrowser();
+	}
+
+	protected async initialize() {
 		this.log("initializing...");
+		await this.openBrowserPage();
+	}
+
+	protected setState(agentState: IAgentState) {
+		this.agentState = agentState;
+		this.context = agentState.context;
+		this.nextStep = agentState.response;
+	}
+
+	get response() {
+		return this.agentState?.response;
+	}
+
+	protected createActionDefinitionsRegistry() {
+		return new ActionDefinitionsRegistry();
+	}
+
+	protected createActionRegistry() {
+		return new ActionsRegistry(this);
 	}
 
 	protected createDefaultInputReader() {
@@ -246,7 +253,7 @@ export class AgentDriver implements IAgentDriver {
 	}
 
 	protected async openBrowserPage() {
-		return await this.browser.start();
+		this.page = await this.browser.start();
 	}
 
 	public printCurrentCost() {
