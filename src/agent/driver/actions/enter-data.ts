@@ -7,6 +7,10 @@ import { ElementAction } from "./element-action";
 
 export interface IEnterDataAction extends IDriverAction {}
 
+export interface IElementDetails {
+	type: string;
+	tagName: string;
+}
 export class EnterDataFormAction
 	extends ElementAction
 	implements IEnterDataAction
@@ -37,6 +41,18 @@ export class EnterDataFormAction
 		});
 	}
 
+	async getElementChecked(element: ElementHandle<Element>) {
+		return await this.getElementAttr(element, "checked");
+	}
+
+	async getElementSelectedIndex(element: ElementHandle<Element>) {
+		return await this.getElementAttr(element, "selectedIndex");
+	}
+
+	async getElementSelectedOptions(element: ElementHandle<Element>) {
+		return await this.getElementAttr(element, "selectedOptions");
+	}
+
 	async getElementType(element: ElementHandle<Element>) {
 		return await this.getElementAttr(element, "type");
 	}
@@ -59,7 +75,51 @@ export class EnterDataFormAction
 		return false;
 	}
 
-	async onIputField(element: ElementHandle, data: any) {
+	async onFormField(
+		element: ElementHandle,
+		elemDetails: IElementDetails,
+		data: any,
+	) {
+		const { tagName, type } = elemDetails;
+		if (type === "input") {
+			await this.onInputField(element, data);
+		}
+		if (tagName === "SELECT") {
+			const selectedIndex = await this.getElementSelectedIndex(element);
+			const selectedOptions = await this.getElementSelectedOptions(element);
+			const sel = {
+				selectedIndex,
+				selectedOptions,
+			};
+
+			await this.onSelector(element, sel, data);
+		}
+
+		if (type === "radio") {
+			const checked = await this.getElementChecked(element);
+			await this.onRadio(element, Boolean(checked), data);
+		}
+	}
+
+	async onRadio(element: ElementHandle, checked: boolean, data: any) {
+		const text = data.text;
+		const checkAnswers = ["yes", "y"];
+		const uncheckAnswers = ["no", "n"];
+		if (!checked && checkAnswers.includes(text)) {
+			await element.click();
+		}
+		if (checked && uncheckAnswers.includes(text)) {
+			await element.click();
+		}
+	}
+
+	// TODO: handle pre-selected options
+	async onSelector(element: ElementHandle, _select: any, data: any) {
+		const text = data.text;
+		await element.select(text);
+	}
+
+	async onInputField(element: ElementHandle, data: any) {
 		const name = this.getElementName(element);
 		const text = data.text;
 		this.prevInput = element;
@@ -104,11 +164,14 @@ export class EnterDataFormAction
 
 				const type = await this.getElementType(element);
 				const tagName = await this.getElementTagName(element);
-
+				const elemDetails = {
+					type,
+					tagName,
+				};
 				// ChatGPT sometimes tries to type empty string
 				// to buttons to click them
 				this.onSubmittable(tagName, type) ||
-					(await this.onIputField(element, data));
+					(await this.onFormField(element, elemDetails, data));
 			} catch (error) {
 				this.log(error);
 				this.addToMessage(
