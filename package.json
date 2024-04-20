@@ -1,6 +1,6 @@
 {
 	"name": "puppeteer-browser-agent",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Puppeteer browser agent for use in AI agent systems",
 	"keywords": [
 		"puppeteer",

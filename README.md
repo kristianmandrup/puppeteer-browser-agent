@@ -12,14 +12,88 @@ This library is based on original work from [unconv/puppeteer-gpt](https://githu
 npm i puppeteer-browser-agent
 ```
 
+## Quick start
+
+A minimal configuration of building blocks with an custom external AI and input controller would look like the following. For more customization options, see [Customization](./Customization.md).
+
+```ts
+export class MyAgentPlanner extends AgentPlanner {
+  // override as necessary
+
+  protected createDriver() {
+    this.driver = new MyAgentDriver(this, this.opts);
+  }
+
+  protected createMessageBroker() {
+    return new MyMessageBroker(this.driver);
+  }
+}
+
+// factory function to return a simple interface to ask questions
+// to an external actor (user or AI agent) and return an answer
+// if this is a method on the driver, it can access all the additional infrastructure and context if needed
+const createInputReader = {
+	question: async (text: string) => {
+		// prompt with text and wait for answer
+		return answer
+	}
+};
+
+export class MyAgentDriver extends AgentDriver {
+  // override as necessary
+
+  protected createInputController() {
+    // pass a createInputReader factory function
+    return new MyTerminalInputController(createInputReader);
+  }
+
+  // to build messages to send to the particular (AI) controller used
+  protected createMessageBuilder() {
+    return new MyMessageBuilder(this);
+  }
+
+  protected createMessageBroker() {
+    return new MyMessageBroker(this);
+  }
+
+
+export class MyMessageBroker extends MessageBroker {
+  // override as necessary
+
+  protected createController() {
+    return new MyAIController(this.driver, definitions, this.opts);
+  }
+
+  protected createTokenCostCalculator() {
+    return new MyAITokenCostCalculator(this.driver, this.opts);
+  }
+}
+
+// See sample OpenAIController included in the code base for inspiration
+// or extend and override it as you see fit
+export class MyAIController implements IAIController {
+  public async getResponse(
+    messages: any[],
+    definitions: any[],
+    fnCall = "auto"
+  ) {
+	// send previous messages and definitions to AI for it to have the relevant context and tools
+	// information to know how to respond with something that can be parsed as a step
+    // ... fetch response from AI API
+    return await response?.json();
+  }
+}
+```
+
 ## Design
 
-The implementation is in Typescript and is best used in this environment.
+The library is written in Typescript and this is the recommended usage environment.
 
-First write an implementation of `IAgentPlanner` or extend the built-in `AgentPlanner` class.
-The `IAgentPlanner` implementation needs to have a an async `start` method which starts the plan.
+An implementation typically starts with a `planner` which implements `IAgentPlanner` or extends/uses the built-in `AgentPlanner` class.
 
-By default it will ask an internal agent (such as a user or AI agent) to accept the plan. When the plan has been accepted it runs the plan via `runPlan` and when completed it calls `onPlanCompleted` which cleans up resources, such as closing the browser.
+The `planner` needs to have an async `start` method which starts the plan.
+
+By default the `planner` will ask an external agent (such as a user or AI agent) to accept the plan. When the plan has been accepted it runs the plan via `runPlan` and when completed it calls `onPlanCompleted` which cleans up resources, such as closing the browser.
 
 ```ts
 public async start() {
@@ -33,9 +107,7 @@ public async start() {
 ```
 
 The `AgentPlanner` can use the `AgentDriver` to implement an agent driving the browser via puppeteer.
-
 The `AgentDriver` must implement `IAgentDriver` by supplying the async methods `start` and `run`.
-
 The `start` method should start the browser and do any initialization necessary.
 
 ```ts
@@ -45,9 +117,7 @@ public async start() {
 }
 ```
 
-The `run` method should implement the core logic which takes actions and performs them via the browser.
-
-The `run` method is configured to set the context, run `doStep` to perform the actions and when done close down the browser.
+The `run` method should implement the core logic which takes actions and performs them via the browser. This method is configured to set the context, run `doStep` to perform the actions and when done do cleanup such as closing down the browser in `onStepDone`.
 
 ```ts
 public async run(agentState: IAgentState) {
@@ -67,15 +137,15 @@ protected async doStep() {
 
 ## StepRunner
 
-The `StepRunner` `run` method takes the response which contains step instructions.
+The `run` method of `StepRunner` takes the `response` which contains step instructions.
 `run` is by default configured to do the following:
 
-- handle the step via an appropriate handler
+- handle the `step` via an appropriate `handler`
 - prepare the next step
 - log the resulting context
 - perform the next step recursively
 
-The `step` is the response from an external agent (such as an AI) that is parsed to determine which handler to process it.
+The `step` is the `response` received from an external agent (such as an AI) that is parsed to determine which `handler` to process it.
 
 ```ts
 public async run(step: any) {
@@ -101,7 +171,7 @@ protected async prepareNextStep() {
 }
 ```
 
-Getting the next step (response) is done by calling `getControllerResponse` which passes a structured message to a `MessageBroker` instance which communicates with the external agent responsible for generating the response that forms the step.
+Getting the next step (ie. agent response) is done by calling `getControllerResponse` which passes a structured message to a `MessageBroker` instance which communicates with the external agent responsible for generating the response that forms the step.
 
 ```ts
 protected async getNextStep() {
@@ -180,7 +250,7 @@ Action classes can extend either of the abstract classes `BaseDriverAction` or `
 
 ## Action definitions
 
-Action definitions are used to inform the browser agent which actions are available and how to use them, similar to the Tools functionality of f.ex [CrewAI]()
+Action definitions are used to inform the browser agent which actions are available and how to use them, similar to the tools of f.ex [CrewAI]()
 
 Each definition must contain the following:
 
@@ -230,200 +300,13 @@ export const definitions = [
 ];
 ```
 
-Definitions are supplied to the driver, either directly or via the planner using `setDefinitions`
+Definitions are supplied to the `driver`, either directly or via the `planner` using methods such as `setDefinitions` and `addDefinitions`
 
-Any actions may include a `definition` property as well. If such a property exists on the action, this defintion will be added automatically to the set of `definitions` when the action is registered.
+Any `action` may include a `definition` property as well. If such a property exists on the `action`, this `definition` will be added automatically to the set of `definitions` when the `action` is registered with the `driver`.
 
-## Custom implementation example
+## Customization
 
-A custom browser agent implementation could look something like the following code snippet, where factory methods in each custom class can be used to wire the implementation as needed.
-
-```ts
-export class MyAgentPlanner extends AgentPlanner {
-  // override as necessary
-
-  protected createDriver() {
-    this.driver = new MyAgentDriver(this, this.opts);
-  }
-
-  protected createMessageBroker() {
-    return new MyMessageBroker(this.driver);
-  }
-}
-
-export class MyMessageBroker extends MessageBroker {
-  // override as necessary
-
-  protected createController() {
-    return new MyAIController(this.driver, definitions, this.opts);
-  }
-
-  protected createTokenCostCalculator() {
-    return new MyAITokenCostCalculator(this.driver, this.opts);
-  }
-}
-
-// Class to control interaction with the AI used to control the puppeteer browser agent
-export class MyAIController implements IAIController {
-  public async getResponse(
-    messages: any[],
-    definitions: any[],
-    fnCall = "auto"
-  ) {
-    // ... fetch response from AI
-    return await response?.json();
-  }
-}
-
-export class MyAgentDriver extends AgentDriver {
-  // override as necessary
-
-  protected createInputController() {
-    // pass a createInputReader factory function
-    return new MyTerminalInputController(createInputReader);
-  }
-
-  protected createMessageBuilder() {
-    return new MyMessageBuilder(this);
-  }
-
-  protected createMessageBroker() {
-    return new MyMessageBroker(this);
-  }
-
-  protected createElementSelector() {
-    return new MyElementSelector(this);
-  }
-
-  protected createAgentBrowser() {
-    return new MyAgentBrowser(this);
-  }
-}
-
-export class MyStepRunner extends StepRunner {
-  // override as necessary
-
-  protected createPageScaper() {
-    return new MyPageScaper(this);
-  }
-}
-
-export class MyAgentBrowser extends AgentBrowser {
-  // override as necessary
-}
-
-export class MyElementSelector extends ElementSelector {
-  // override as necessary
-  protected createPageNavigator() {
-    return new MyPageNavigator(this.driver);
-  }
-}
-
-export class MyPageNavigator extends DocumentNavigator {
-  // override as necessary
-
-  protected createElementEvaluator(
-    element: Element,
-    id: number,
-    selector: string
-  ) {
-    return new MyElementEvaluator(this.driver, element, id, selector);
-  }
-}
-
-export class MyPageScraper extends PageScraper {
-  // override as necessary
-
-  protected createDocumentTraverser() {
-    return new DocumentTraverser(this.driver, this.opts);
-  }
-}
-
-export class MyDocumentTraverser extends DocumentTraverser {
-  // override as necessary
-
-  protected createFormatter() {
-    return new HtmlFormatter(this.driver);
-  }
-
-  protected createElementTypeHandler() {
-    return new ElementTypeHandler(this.driver, this);
-  }
-}
-
-export class MyHtmlFormatter extends HtmlFormatter {
-  // override as necessary
-}
-
-export class MyElementTypeHandler extends ElementTypeHandler {
-  // override as necessary
-
-  protected createTagBuilder() {
-    return new TagBuilder(this.driver);
-  }
-}
-
-export class MyElementSelector extends ElementSelector {
-  // override as necessary
-
-  protected createInteractiveElementHandler() {
-    return new InteractiveElementHandler(this.driver);
-  }
-}
-
-export class MyMessageBuilder extends MessageBuilder {
-  // override as necessary
-}
-
-// And so on...
-
-const context = {
-  role: "system",
-  content: `## OBJECTIVE ##
-You have been tasked with crawling the internet based on a task given by the user. You are connected to a web browser which you can control via function calls to navigate to pages and list elements on the page. You can also type into search boxes and other input fields and send forms. You can also click links on the page. You will behave as a human browsing the web.
-
-You will try to navigate directly to the most relevant web address. If you were given a URL, go to it directly. If you encounter a Page Not Found error, try another URL. If multiple URLs don't work, you are probably using an outdated version of the URL scheme of that website. In that case, try navigating to their front page and using their search bar or try navigating to the right place with links.
-`,
-};
-
-const planner = new MyAgentPlanner(context, {
-  debug: true,
-});
-
-const { driver } = planer;
-
-// create actions and register them with the driver
-const myGotoUrlAction = new MyGotoUrlAction();
-driver.registerAction(myGotoUrlAction, "goto_url");
-
-// the following demonstrates using the id param of registerAction to register a special purpose action
-const specialConfig = {
-  // ...
-};
-const myGotoUrlAction = new MyGotoUrlAction(specialConfig);
-driver.registerAction(myGotoUrlAction, "special_goto_url");
-// register more actions as needed
-
-// set action definitions via planner
-driver.addDefinitions(definitions);
-
-// configure step runner with a custom response handler
-const { stepRunner } = driver;
-
-class MyCustomResponseHandler implements IResponseHandler {
-  // ...
-  async handle(step: any) {
-    // ...
-  }
-}
-
-const customHandler = new MyCustomResponseHandler();
-
-stepRunner.registerHandler(customHandler);
-
-// run the plan
-await planner.runPlan();
-```
+See the [Customization example](./Customization.md) document which may act as a guide.
 
 ## Contribute
 
