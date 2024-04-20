@@ -7,6 +7,15 @@ import { ElementAction } from "./element-action";
 
 export interface IEnterDataAction extends IDriverAction {}
 
+export interface IFieldData {
+	pgpt_id: string;
+	text: string;
+	label?: string;
+	name?: string;
+	options?: string[];
+	index?: number;
+}
+
 export type TSelectAttrs = {
 	multiple: boolean;
 	options: HTMLOptionsCollection;
@@ -22,8 +31,8 @@ export class EnterDataFormAction
 	extends ElementAction
 	implements IEnterDataAction
 {
-	formData: any;
-	prevInput: any;
+	formData: IFieldData[] = [];
+	prevInput?: ElementHandle;
 	// linksAndInputs: ElementHandle<Element>[] = [];
 	navigator: IPageNavigator;
 	taskName = "enter_data";
@@ -140,23 +149,27 @@ export class EnterDataFormAction
 	async onRadioField(
 		element: ElementHandle,
 		elemDetails: IElementDetails,
-		data: any,
+		data: IFieldData,
 	) {
 		if (!this.isRadioField(elemDetails)) {
 			return;
 		}
-		const labelElem = await this.findMatchingLabelFor(elemDetails.name);
-		const labelText = labelElem?.textContent;
-		if (labelText === data.text) {
-			const checked = await this.getElementChecked(element);
-			await this.checkRadioOn(element, Boolean(checked), data);
+		// check label if data.label is set
+		if (data.label) {
+			const labelElem = await this.findMatchingLabelFor(elemDetails.name);
+			const labelText = labelElem?.textContent;
+			if (labelText !== data.text) {
+				return;
+			}
 		}
+		const checked = await this.getElementChecked(element);
+		await this.checkRadioOn(element, Boolean(checked), data);
 	}
 
 	async onFormField(
 		element: ElementHandle,
 		elemDetails: IElementDetails,
-		data: any,
+		data: IFieldData,
 	) {
 		await this.onTextInputField(element, elemDetails, data);
 		await this.onSelectField(element, elemDetails, data);
@@ -171,7 +184,11 @@ export class EnterDataFormAction
 		return ["no", "uncheck"];
 	}
 
-	async checkRadioOn(element: ElementHandle, checked: boolean, _data: any) {
+	async checkRadioOn(
+		element: ElementHandle,
+		checked: boolean,
+		_data: IFieldData,
+	) {
 		if (!checked) {
 			await element.click();
 		}
@@ -189,7 +206,7 @@ export class EnterDataFormAction
 	async selectOptionsOn(
 		element: ElementHandle,
 		select: TSelectAttrs,
-		data: any,
+		data: IFieldData,
 	) {
 		if (select.multiple) {
 			const options = data.text.split(",");
@@ -202,7 +219,7 @@ export class EnterDataFormAction
 		await element.select(text);
 	}
 
-	async typeTextIn(element: ElementHandle, data: any) {
+	async typeTextIn(element: ElementHandle, data: IFieldData) {
 		const name = this.getElementName(element);
 		const text = data.text;
 		this.prevInput = element;
@@ -229,6 +246,7 @@ export class EnterDataFormAction
 		const { fnArgs } = this;
 		this.formData = fnArgs.form_data;
 
+		// data can have: pgpt_id, text, label, name, options, index
 		for (const data of this.formData) {
 			const id = data.pgpt_id;
 
@@ -260,7 +278,7 @@ export class EnterDataFormAction
 			} catch (error) {
 				this.log(error);
 				this.addToMessage(
-					`Error typing "${data.text}" to input field ID ${data.element_id}\n`,
+					`Error typing "${data.text}" to input field ID ${data.pgpt_id}\n`,
 				);
 			}
 		}
@@ -301,10 +319,12 @@ export class EnterDataFormAction
 	}
 
 	async handleForm() {
-		const form = await this.prevInput.evaluateHandle((input: any) =>
+		const form = await this.prevInput?.evaluateHandle((input: any) =>
 			input.closest("form"),
 		);
-
+		if (!form) {
+			return;
+		}
 		await form.evaluate((form: any) => form.submit());
 		await this.waitForNavigation();
 	}
