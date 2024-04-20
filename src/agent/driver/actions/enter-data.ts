@@ -14,6 +14,7 @@ export type TSelectAttrs = {
 	selectedOptions: HTMLCollectionOf<HTMLOptionElement>;
 };
 export interface IElementDetails {
+	name: string;
 	type: string;
 	tagName: string;
 }
@@ -118,6 +119,24 @@ export class EnterDataFormAction
 		return tagName === "INPUT" && type === "radio";
 	}
 
+	labelSelectorFor(name: string): string {
+		return `label[for=${name}]`;
+	}
+
+	async findMatchingLabelFor(name: string): Promise<Element | undefined> {
+		const elements = await this.page?.$$(this.labelSelectorFor(name));
+		if (!elements) {
+			return;
+		}
+		const elem = elements[0];
+		if (!elem) {
+			return;
+		}
+		return await elem.evaluate((el: Element) => {
+			return el;
+		});
+	}
+
 	async onRadioField(
 		element: ElementHandle,
 		elemDetails: IElementDetails,
@@ -126,8 +145,12 @@ export class EnterDataFormAction
 		if (!this.isRadioField(elemDetails)) {
 			return;
 		}
-		const checked = await this.getElementChecked(element);
-		await this.checkRadioOn(element, Boolean(checked), data);
+		const labelElem = await this.findMatchingLabelFor(elemDetails.name);
+		const labelText = labelElem?.textContent;
+		if (labelText === data.text) {
+			const checked = await this.getElementChecked(element);
+			await this.checkRadioOn(element, Boolean(checked), data);
+		}
 	}
 
 	async onFormField(
@@ -145,15 +168,11 @@ export class EnterDataFormAction
 	}
 
 	get uncheckAnswers() {
-		return ["no", "n", "uncheck"];
+		return ["no", "uncheck"];
 	}
 
-	async checkRadioOn(element: ElementHandle, checked: boolean, data: any) {
-		const text = data.text;
-		if (!checked && this.checkAnswers.includes(text)) {
-			await element.click();
-		}
-		if (checked && this.uncheckAnswers.includes(text)) {
+	async checkRadioOn(element: ElementHandle, checked: boolean, _data: any) {
+		if (!checked) {
 			await element.click();
 		}
 	}
@@ -226,9 +245,11 @@ export class EnterDataFormAction
 					this.prevInput = element;
 				}
 
+				const name = await this.getElementName(element);
 				const type = await this.getElementType(element);
 				const tagName = await this.getElementTagName(element);
 				const elemDetails = {
+					name,
 					type,
 					tagName,
 				};
