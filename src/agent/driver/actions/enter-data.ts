@@ -12,8 +12,9 @@ export interface IFieldData {
 	text: string;
 	label?: string;
 	name?: string;
-	options?: string[];
+	selected?: string[];
 	index?: number;
+	checked: boolean;
 }
 
 export type TSelectAttrs = {
