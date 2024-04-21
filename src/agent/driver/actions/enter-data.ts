@@ -95,13 +95,21 @@ export class EnterDataFormAction
 		return false;
 	}
 
-	async onTextInputField(
+	isTextInputField({ tagName, type }: IElementDetails) {
+		return tagName === "INPUT" && type === "text";
+	}
+
+	isTextAreaField({ tagName, type }: IElementDetails) {
+		return tagName === "TEXTAREA";
+	}
+
+	async onTextField(
 		element: ElementHandle,
-		{ type }: IElementDetails,
+		details: IElementDetails,
 		data: any,
 	) {
-		if (type === "input") {
-			await this.typeTextIn(element, data);
+		if (this.isTextInputField(details) || this.isTextAreaField(details)) {
+			await this.typeTextIn(element, details, data);
 		}
 	}
 
@@ -113,15 +121,15 @@ export class EnterDataFormAction
 
 	async onSelectField(
 		element: ElementHandle,
-		{ tagName }: IElementDetails,
+		details: IElementDetails,
 		data: any,
 	) {
-		if (tagName !== "SELECT") {
+		if (details.tagName !== "SELECT") {
 			return;
 		}
 		const sel: TSelectAttrs = await this.getSelectElementAttr(element);
 		if (this.hasMatchingOption(sel.options, data)) {
-			await this.selectOptionsOn(element, sel, data);
+			await this.selectOptionsOn(element, details, sel, data);
 		}
 	}
 
@@ -149,32 +157,24 @@ export class EnterDataFormAction
 
 	async onRadioField(
 		element: ElementHandle,
-		elemDetails: IElementDetails,
+		details: IElementDetails,
 		data: IFieldData,
 	) {
-		if (!this.isRadioField(elemDetails)) {
+		if (!this.isRadioField(details)) {
 			return;
 		}
-		// check label if data.label is set
-		if (data.label) {
-			const labelElem = await this.findMatchingLabelFor(elemDetails.name);
-			const labelText = labelElem?.textContent;
-			if (labelText !== data.text) {
-				return;
-			}
-		}
 		const checked = await this.getElementChecked(element);
-		await this.checkRadioOn(element, Boolean(checked), data);
+		await this.checkRadioOn(element, details, Boolean(checked), data);
 	}
 
 	async onFormField(
 		element: ElementHandle,
-		elemDetails: IElementDetails,
+		details: IElementDetails,
 		data: IFieldData,
 	) {
-		await this.onTextInputField(element, elemDetails, data);
-		await this.onSelectField(element, elemDetails, data);
-		await this.onRadioField(element, elemDetails, data);
+		await this.onTextField(element, details, data);
+		await this.onSelectField(element, details, data);
+		await this.onRadioField(element, details, data);
 	}
 
 	get checkAnswers() {
@@ -185,13 +185,32 @@ export class EnterDataFormAction
 		return ["no", "uncheck"];
 	}
 
+	async clickRadio(
+		element: ElementHandle,
+		details: IElementDetails,
+		checked: boolean,
+	) {
+		const checkAction = checked ? "checked" : "unchecked";
+		const name = details.name;
+		this.prevInput = element;
+		await element.click();
+		this.log(`${this.taskPrefix}${checkAction} radio for ${name}`);
+		this.addToMessage(`${checkAction} radio for "${name}"\n`);
+	}
+
 	async checkRadioOn(
 		element: ElementHandle,
+		details: IElementDetails,
 		checked: boolean,
-		_data: IFieldData,
+		data: IFieldData,
 	) {
-		if (!checked) {
-			await element.click();
+		const text = data.text;
+		if (!checked && this.checkAnswers.includes(text)) {
+			await this.clickRadio(element, details, !checked);
+		}
+
+		if (checked && this.uncheckAnswers.includes(text)) {
+			await this.clickRadio(element, details, !checked);
 		}
 	}
 
@@ -206,13 +225,20 @@ export class EnterDataFormAction
 
 	async selectOptionsOn(
 		element: ElementHandle,
+		details: IElementDetails,
 		select: TSelectAttrs,
 		data: IFieldData,
 	) {
+		const name = details.name;
 		if (select.multiple) {
 			const options = data.text.split(",");
 			for (const opt of options) {
+				this.prevInput = element;
 				await element.select(opt);
+				this.log(`${this.taskPrefix}Selecting opt in ${name}`);
+				this.addToMessage(
+					`Selected "${opt}" option for select element "${name}"\n`,
+				);
 			}
 			return;
 		}
@@ -220,8 +246,12 @@ export class EnterDataFormAction
 		await element.select(text);
 	}
 
-	async typeTextIn(element: ElementHandle, data: IFieldData) {
-		const name = this.getElementName(element);
+	async typeTextIn(
+		element: ElementHandle,
+		details: IElementDetails,
+		data: IFieldData,
+	) {
+		const name = details.name;
 		const text = data.text;
 		this.prevInput = element;
 		await element.type(data.text);
@@ -241,6 +271,18 @@ export class EnterDataFormAction
 
 	setElement(element: ElementHandle<Element>) {
 		this.element = element;
+	}
+
+	async findMatchingLabel(details: IElementDetails, data: IFieldData) {
+		if (!data.label) {
+			return;
+		}
+		const labelElem = await this.findMatchingLabelFor(details.name);
+		const labelText = labelElem?.textContent;
+		if (labelText !== data.text) {
+			return;
+		}
+		return labelElem;
 	}
 
 	public async execute() {
