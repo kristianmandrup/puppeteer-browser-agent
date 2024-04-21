@@ -12,6 +12,10 @@ export abstract class ElementAction
 		return await this.elementSelector?.getElements(this.page);
 	}
 
+	protected markerClass(id: number | string) {
+		return this.driver.markerClass(id);
+	}
+
 	protected get elementSelector() {
 		return this.driver.elementSelector;
 	}

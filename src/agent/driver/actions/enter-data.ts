@@ -115,7 +115,8 @@ export class EnterDataFormAction
 
 	protected hasMatchingOption(options: HTMLOptionsCollection, data: any) {
 		return Array.from(options).find(
-			(opt: HTMLOptionElement) => opt.label === data.text,
+			(opt: HTMLOptionElement) =>
+				opt.label === data.text || data.selected?.includes(opt.label),
 		);
 	}
 
@@ -123,7 +124,7 @@ export class EnterDataFormAction
 		handle: ElementHandle,
 		element: Element,
 		details: IElementDetails,
-		data: any,
+		data: IFieldData,
 	) {
 		if (details.tagName !== "SELECT") {
 			return;
@@ -138,14 +139,26 @@ export class EnterDataFormAction
 		return tagName === "INPUT" && type === "radio";
 	}
 
-	async findInputForLabel(
+	async findFieldWithPlaceholder(
+		name: string,
+	): Promise<ElementHandle | null | undefined> {
+		return await this.page?.$(
+			`input[placeholder=${name}], textarea[placeholder=${name}]`,
+		);
+	}
+
+	async findHandleForLabelNamed(
 		name: string,
 	): Promise<ElementHandle | null | undefined> {
 		return await this.page?.$(`label[for=${name}]`);
 	}
 
-	async findLabelFor(name: string): Promise<ElementHandle | null | undefined> {
-		return await this.page?.$(`input[name=${name}]`);
+	async findHandleForFieldNamed(
+		name: string,
+	): Promise<ElementHandle | null | undefined> {
+		return await this.page?.$(
+			`input[name=${name}], textarea[name=${name}], select[name=${name}]`,
+		);
 	}
 
 	async onRadioField(
@@ -200,11 +213,13 @@ export class EnterDataFormAction
 		data: IFieldData,
 	) {
 		const text = data.text;
-		if (!checked && this.checkAnswers.includes(text)) {
+		const shouldCheck = data.checked || this.checkAnswers.includes(text);
+		const shouldUncheck =
+			data.checked === false || this.uncheckAnswers.includes(text);
+		if (!checked && shouldCheck) {
 			await this.clickRadio(handle, details, !checked);
 		}
-
-		if (checked && this.uncheckAnswers.includes(text)) {
+		if (checked && shouldUncheck) {
 			await this.clickRadio(handle, details, !checked);
 		}
 	}
@@ -226,7 +241,7 @@ export class EnterDataFormAction
 	) {
 		const name = details.name;
 		if (select.multiple) {
-			const options = data.text.split(",");
+			const options = data.selected || data.text.split(",");
 			for (const opt of options) {
 				this.prevInput = element;
 				await element.select(opt);
@@ -256,7 +271,7 @@ export class EnterDataFormAction
 	}
 
 	elementClassIdSelector(id: string) {
-		return this.driver.markerClass(id);
+		return this.markerClass(id);
 	}
 
 	setElement(element: ElementHandle<Element>) {
@@ -268,7 +283,7 @@ export class EnterDataFormAction
 		if (!forField) {
 			return;
 		}
-		return this.findInputForLabel(forField);
+		return this.findHandleForFieldNamed(forField);
 	}
 
 	getFormData() {
@@ -291,6 +306,47 @@ export class EnterDataFormAction
 		};
 	}
 
+	async getFieldHandleByPlaceholder(data: IFieldData) {
+		const { label } = data;
+		if (!label) {
+			return;
+		}
+		return await this.findFieldWithPlaceholder(label);
+	}
+
+	async getFieldHandleByLabel(data: IFieldData) {
+		const { label } = data;
+		if (!label) {
+			return;
+		}
+		const labelHandle = await this.findHandleForLabelNamed(label);
+		if (labelHandle) {
+			const labelElement = await this.handleToElement(labelHandle);
+			return await this.findFieldForLabel(labelElement);
+		}
+	}
+
+	async getFieldHandleById(data: IFieldData) {
+		const { pp_id: id } = data;
+		if (!id) {
+			return;
+		}
+		return await this.getElementById(id);
+	}
+
+	async getFieldHandle(data: IFieldData) {
+		const { pp_id: id, label, name } = data;
+		const handle =
+			(await this.getFieldHandleById(data)) ||
+			(await this.getFieldHandleByLabel(data));
+		if (!handle) {
+			throw new Error(
+				`No such element on page: ${[id, label, name].join(",")}`,
+			);
+		}
+		return handle;
+	}
+
 	public async execute() {
 		this.formData = this.getFormData();
 
@@ -298,23 +354,7 @@ export class EnterDataFormAction
 		for (const data of this.formData) {
 			this.resetMessage();
 			try {
-				// TODO: refactor
-				const { pp_id: id, label, name } = data;
-				let handle: ElementHandle | null | undefined;
-				if (id) {
-					handle = await this.getElementById(id);
-				} else if (label) {
-					const labelHandle = await this.findLabelFor(label);
-					if (labelHandle) {
-						const labelElement = await this.handleToElement(labelHandle);
-						handle = await this.findFieldForLabel(labelElement);
-					}
-				}
-				if (!handle) {
-					throw new Error(
-						`No such element on page: ${[id, label, name].join(",")}`,
-					);
-				}
+				const handle = await this.getFieldHandle(data);
 				this.setElement(handle);
 				if (!this.prevInput) {
 					this.prevInput = handle;

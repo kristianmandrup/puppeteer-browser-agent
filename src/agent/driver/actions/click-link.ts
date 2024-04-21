@@ -88,7 +88,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 		if (!this.linkId) {
 			throw new Error("Missing linkId");
 		}
-		return this.driver.markerClass(this.linkId);
+		return this.markerClass(this.linkId);
 	}
 
 	action() {
