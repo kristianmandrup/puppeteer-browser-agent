@@ -48,7 +48,7 @@ export const actionDefinitions = [
 	{
 		name: "click_link",
 		description:
-			"Clicks a link with the given pgpt_id on the page. Note that pgpt_id is required and you must use the corresponding pgpt-id attribute from the page content. Add the text of the link to confirm that you are clicking the right link.",
+			"Clicks a link with the given pp_id on the page. Note that pp_id is required and you must use the corresponding pgpt-id attribute from the page content. Add the text of the link to confirm that you are clicking the right link.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -56,14 +56,14 @@ export const actionDefinitions = [
 					type: "string",
 					description: "The text on the link you want to click",
 				},
-				pgpt_id: {
+				pp_id: {
 					type: "number",
 					description:
 						"The pgpt-id of the link to click (from the page content)",
 				},
 			},
 		},
-		required: ["reason", "pgpt_id"],
+		required: ["reason", "pp_id"],
 	},
 	{
 		name: "type_text",
@@ -76,14 +76,38 @@ export const actionDefinitions = [
 					items: {
 						type: "object",
 						properties: {
-							pgpt_id: {
+							pp_id: {
 								type: "number",
 								description:
-									"The pgpt-id attribute of the input to type into (from the page content)",
+									"The marker id attribute of the field to enter data into",
+							},
+							label: {
+								type: "string",
+								description: "The label of the field to enter data into",
+							},
+							name: {
+								type: "string",
+								description: "The name of the field to enter data into",
 							},
 							text: {
 								type: "string",
 								description: "The text to type",
+							},
+							select: {
+								type: "array",
+								description: "list of options to select",
+								items: {
+									type: "string",
+									description: "option to select",
+								},
+							},
+							index: {
+								type: "number",
+								description: "index number of option to select",
+							},
+							checked: {
+								type: "boolean",
+								description: "whether to check or uncheck radio button",
 							},
 						},
 					},

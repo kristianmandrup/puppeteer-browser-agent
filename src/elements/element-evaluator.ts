@@ -49,8 +49,12 @@ export class ElementEvaluator {
 		this.text();
 	}
 
+	protected get markerClass() {
+		return this.driver.markerClass(this.id);
+	}
+
 	protected addMarkerClass() {
-		this.element?.classList.add(`pgpt-element${this.id}`);
+		this.element?.classList.add(this.markerClass);
 	}
 
 	protected elemRole() {

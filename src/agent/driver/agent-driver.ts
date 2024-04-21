@@ -46,6 +46,7 @@ export interface IAgentDriver {
 	structuredMsg: StructuredMsg;
 	context?: any[];
 	message?: string;
+	markerClass(id: number | string): string;
 	createMessageForController(content: string): Promise<void>;
 	start(): Promise<void>;
 	closeBrowser(): void;
@@ -185,6 +186,10 @@ export class AgentDriver implements IAgentDriver {
 			return;
 		}
 		console.info(msg);
+	}
+
+	public markerClass(id: number) {
+		return `pp-element${id}`;
 	}
 
 	protected prepareStep(agentState: IAgentState) {

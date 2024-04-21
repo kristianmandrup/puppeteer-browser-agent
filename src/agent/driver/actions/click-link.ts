@@ -34,7 +34,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	}
 
 	protected updateState() {
-		this.linkId = this.fnArgs.pgpt_id;
+		this.linkId = this.fnArgs.pp_id;
 		this.linkText = this.fnArgs.text;
 	}
 
@@ -46,7 +46,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 		if (this.linkId) {
 			return;
 		}
-		this.message = "ERROR: Missing parameter pgpt_id";
+		this.message = "ERROR: Missing parameter pp_id";
 	}
 
 	protected missingLinkText() {
@@ -56,7 +56,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 		this.message = "";
 		this.context.pop();
 		this.userMsg =
-			"Please the correct link on the page. Remember to set both the text and the pgpt_id parameter.";
+			"Please the correct link on the page. Remember to set both the text and the pp_id parameter.";
 	}
 
 	protected findLink() {
@@ -85,7 +85,10 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	}
 
 	protected get linkElementSelector() {
-		return `.pgpt-element${this.linkId}`;
+		if (!this.linkId) {
+			throw new Error("Missing linkId");
+		}
+		return this.driver.markerClass(this.linkId);
 	}
 
 	action() {

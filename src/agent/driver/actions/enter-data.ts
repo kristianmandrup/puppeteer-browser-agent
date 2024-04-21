@@ -8,7 +8,7 @@ import { ElementAction } from "./element-action";
 export interface IEnterDataAction extends IDriverAction {}
 
 export interface IFieldData {
-	pgpt_id: string;
+	pp_id: string;
 	text: string;
 	label?: string;
 	name?: string;
@@ -51,43 +51,43 @@ export class EnterDataFormAction
 		return await this.page?.$(elementCssSelector);
 	}
 
-	async getElementAttr(element: ElementHandle<Element>, attrName: string) {
+	async handleToElement(element: ElementHandle<Element>): Promise<Element> {
 		return await element.evaluate((el: Element) => {
-			const val = el.getAttribute(attrName);
-			return val ?? "";
+			return el;
 		});
 	}
 
-	async getSelectElementAttr(element: ElementHandle<Element>) {
-		return await element.evaluate((el: Element) => {
-			const sel = el as HTMLSelectElement;
-			const opts = sel.options;
-			const selectedIndex = sel.selectedIndex;
-			const selectedOptions = sel.selectedOptions;
-			const multiple = sel.multiple;
-			return { options: opts, selectedIndex, selectedOptions, multiple };
-		});
+	getElementAttr(element: Element, attrName: string) {
+		const val = element.getAttribute(attrName);
+		return val ?? "";
 	}
 
-	async getElementChecked(element: ElementHandle<Element>) {
-		return await this.getElementAttr(element, "checked");
+	getSelectElementAttr(element: Element) {
+		const sel = element as HTMLSelectElement;
+		const opts = sel.options;
+		const selectedIndex = sel.selectedIndex;
+		const selectedOptions = sel.selectedOptions;
+		const multiple = sel.multiple;
+		return { options: opts, selectedIndex, selectedOptions, multiple };
 	}
 
-	async getElementType(element: ElementHandle<Element>) {
-		return await this.getElementAttr(element, "type");
+	getElementChecked(element: Element) {
+		return this.getElementAttr(element, "checked");
 	}
 
-	async getElementName(element: ElementHandle<Element>) {
-		return await this.getElementAttr(element, "name");
+	getElementType(element: Element) {
+		return this.getElementAttr(element, "type");
 	}
 
-	async getElementTagName(element: ElementHandle<Element>) {
-		return await element.evaluate((el: Element) => {
-			return el.tagName;
-		});
+	getElementName(element: Element) {
+		return this.getElementAttr(element, "name");
 	}
 
-	onSubmittable(tagName: string, type?: string) {
+	getElementTagName(element: Element) {
+		return element.tagName;
+	}
+
+	onSubmittable({ tagName, type }: IElementDetails) {
 		if (tagName === "BUTTON" || type === "submit" || type === "button") {
 			this.fnArgs.submit = true;
 			return true;
@@ -120,7 +120,8 @@ export class EnterDataFormAction
 	}
 
 	async onSelectField(
-		element: ElementHandle,
+		handle: ElementHandle,
+		element: Element,
 		details: IElementDetails,
 		data: any,
 	) {
@@ -129,7 +130,7 @@ export class EnterDataFormAction
 		}
 		const sel: TSelectAttrs = await this.getSelectElementAttr(element);
 		if (this.hasMatchingOption(sel.options, data)) {
-			await this.selectOptionsOn(element, details, sel, data);
+			await this.selectOptionsOn(handle, details, sel, data);
 		}
 	}
 
@@ -137,26 +138,19 @@ export class EnterDataFormAction
 		return tagName === "INPUT" && type === "radio";
 	}
 
-	labelSelectorFor(name: string): string {
-		return `label[for=${name}]`;
+	async findInputForLabel(
+		name: string,
+	): Promise<ElementHandle | null | undefined> {
+		return await this.page?.$(`label[for=${name}]`);
 	}
 
-	async findMatchingLabelFor(name: string): Promise<Element | undefined> {
-		const elements = await this.page?.$$(this.labelSelectorFor(name));
-		if (!elements) {
-			return;
-		}
-		const elem = elements[0];
-		if (!elem) {
-			return;
-		}
-		return await elem.evaluate((el: Element) => {
-			return el;
-		});
+	async findLabelFor(name: string): Promise<ElementHandle | null | undefined> {
+		return await this.page?.$(`input[name=${name}]`);
 	}
 
 	async onRadioField(
-		element: ElementHandle,
+		handle: ElementHandle,
+		element: Element,
 		details: IElementDetails,
 		data: IFieldData,
 	) {
@@ -164,17 +158,18 @@ export class EnterDataFormAction
 			return;
 		}
 		const checked = await this.getElementChecked(element);
-		await this.checkRadioOn(element, details, Boolean(checked), data);
+		await this.checkRadioOn(handle, details, Boolean(checked), data);
 	}
 
 	async onFormField(
-		element: ElementHandle,
+		handle: ElementHandle,
+		element: Element,
 		details: IElementDetails,
 		data: IFieldData,
 	) {
-		await this.onTextField(element, details, data);
-		await this.onSelectField(element, details, data);
-		await this.onRadioField(element, details, data);
+		await this.onTextField(handle, details, data);
+		await this.onSelectField(handle, element, details, data);
+		await this.onRadioField(handle, element, details, data);
 	}
 
 	get checkAnswers() {
@@ -186,31 +181,31 @@ export class EnterDataFormAction
 	}
 
 	async clickRadio(
-		element: ElementHandle,
+		handle: ElementHandle,
 		details: IElementDetails,
 		checked: boolean,
 	) {
 		const checkAction = checked ? "checked" : "unchecked";
 		const name = details.name;
-		this.prevInput = element;
-		await element.click();
+		this.prevInput = handle;
+		await handle.click();
 		this.log(`${this.taskPrefix}${checkAction} radio for ${name}`);
 		this.addToMessage(`${checkAction} radio for "${name}"\n`);
 	}
 
 	async checkRadioOn(
-		element: ElementHandle,
+		handle: ElementHandle,
 		details: IElementDetails,
 		checked: boolean,
 		data: IFieldData,
 	) {
 		const text = data.text;
 		if (!checked && this.checkAnswers.includes(text)) {
-			await this.clickRadio(element, details, !checked);
+			await this.clickRadio(handle, details, !checked);
 		}
 
 		if (checked && this.uncheckAnswers.includes(text)) {
-			await this.clickRadio(element, details, !checked);
+			await this.clickRadio(handle, details, !checked);
 		}
 	}
 
@@ -260,68 +255,81 @@ export class EnterDataFormAction
 		this.addToMessage(`Typed "${text}" to input field "${name}"\n`);
 	}
 
-	pgptElementSelectorFor(id: string) {
-		return `.pgpt-element${id}`;
-	}
-
-	async getPgptElementById(id: string) {
-		const selector = this.pgptElementSelectorFor(id);
-		return await this.selectElement(selector);
+	elementClassIdSelector(id: string) {
+		return this.driver.markerClass(id);
 	}
 
 	setElement(element: ElementHandle<Element>) {
 		this.element = element;
 	}
 
-	async findMatchingLabel(details: IElementDetails, data: IFieldData) {
-		if (!data.label) {
+	findFieldForLabel(labelElem: Element) {
+		const forField = labelElem.getAttribute("for");
+		if (!forField) {
 			return;
 		}
-		const labelElem = await this.findMatchingLabelFor(details.name);
-		const labelText = labelElem?.textContent;
-		if (labelText !== data.text) {
-			return;
-		}
-		return labelElem;
+		return this.findInputForLabel(forField);
+	}
+
+	getFormData() {
+		return this.fnArgs.form_data;
+	}
+
+	async getElementById(id: string) {
+		const selector = this.elementClassIdSelector(id);
+		return await this.selectElement(selector);
+	}
+
+	getElementDetails(element: Element): IElementDetails {
+		const name = this.getElementName(element);
+		const type = this.getElementType(element);
+		const tagName = this.getElementTagName(element);
+		return {
+			name,
+			type,
+			tagName,
+		};
 	}
 
 	public async execute() {
-		const { fnArgs } = this;
-		this.formData = fnArgs.form_data;
+		this.formData = this.getFormData();
 
-		// data can have: pgpt_id, text, label, name, options, index
+		// data can have: pp_id, text, label, name, options, index
 		for (const data of this.formData) {
-			const id = data.pgpt_id;
-
 			this.resetMessage();
-
 			try {
-				const selector = this.pgptElementSelectorFor(id);
-				const element = await this.selectElement(selector);
-				if (!element) {
-					throw new Error(`No such element on page: ${selector}`);
+				// TODO: refactor
+				const { pp_id: id, label, name } = data;
+				let handle: ElementHandle | null | undefined;
+				if (id) {
+					handle = await this.getElementById(id);
+				} else if (label) {
+					const labelHandle = await this.findLabelFor(label);
+					if (labelHandle) {
+						const labelElement = await this.handleToElement(labelHandle);
+						handle = await this.findFieldForLabel(labelElement);
+					}
 				}
-				this.setElement(element);
+				if (!handle) {
+					throw new Error(
+						`No such element on page: ${[id, label, name].join(",")}`,
+					);
+				}
+				this.setElement(handle);
 				if (!this.prevInput) {
-					this.prevInput = element;
+					this.prevInput = handle;
 				}
 
-				const name = await this.getElementName(element);
-				const type = await this.getElementType(element);
-				const tagName = await this.getElementTagName(element);
-				const elemDetails = {
-					name,
-					type,
-					tagName,
-				};
+				const element = await this.handleToElement(handle);
+				const elemDetails = await this.getElementDetails(element);
 				// ChatGPT sometimes tries to type empty string
 				// to buttons to click them
-				this.onSubmittable(tagName, type) ||
-					(await this.onFormField(element, elemDetails, data));
+				this.onSubmittable(elemDetails) ||
+					(await this.onFormField(handle, element, elemDetails, data));
 			} catch (error) {
 				this.log(error);
 				this.addToMessage(
-					`Error typing "${data.text}" to input field ID ${data.pgpt_id}\n`,
+					`Error typing "${data.text}" to input field ID ${data.pp_id}\n`,
 				);
 			}
 		}

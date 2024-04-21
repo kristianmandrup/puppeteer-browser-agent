@@ -29,6 +29,10 @@ export class InteractiveElementHandler {
 		return new ElementEvaluator(this.driver, element, id, selector);
 	}
 
+	protected markerClass(id: number) {
+		return this.driver.markerClass(id);
+	}
+
 	async nextInteractiveElement(
 		element: ElementHandle<Element>,
 		id: number,
@@ -45,8 +49,8 @@ export class InteractiveElementHandler {
 			return false;
 		}
 
-		const visible = await page.evaluate((id) => {
-			const element = document.querySelector(`.pgpt-element${id}`);
+		const visible = await page.evaluate((id: number) => {
+			const element = document.querySelector(this.markerClass(id));
 
 			if (!element) {
 				return false;
@@ -71,7 +75,7 @@ export class InteractiveElementHandler {
 			return false;
 		}
 		await page.evaluate((id) => {
-			const element = document.querySelector(`.pgpt-element${id}`);
+			const element = document.querySelector(this.markerClass(id));
 			if (!element) {
 				return;
 			}
