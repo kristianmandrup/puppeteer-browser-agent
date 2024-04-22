@@ -16,7 +16,7 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 	}
 
 	async execute() {
-		let url = this.fnArgs.url;
+		const url = this.fnArgs.url;
 		if (!url) {
 			throw new Error("Missing url to go to");
 		}
@@ -26,8 +26,8 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 		}
 		try {
 			await this.gotoUrl(url);
-			url = await this.getUrl(url);
-			this.setMessage(`You are now on ${url}`);
+			const pageUrl = await this.getUrl();
+			this.setMessage(`You are now on ${pageUrl}`);
 		} catch (error) {
 			const errMessage =
 				this.downloadError(error) || this.defaultGotoErrorMessage;
@@ -44,11 +44,7 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 		});
 	}
 
-	async getUrl(url: string) {
-		const { waitUntil } = this;
-		await this.page?.goto(url, {
-			waitUntil,
-		});
+	async getUrl() {
 		return await this.page?.url();
 	}
 

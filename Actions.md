@@ -70,7 +70,7 @@ The AI agent should be given these instructions so it knows how to instruct the 
 
 ```ts
 {
-	name: "type_text",
+	name: "enter_data",
 	description: "Types text to input fields and optionally submit the form",
 	parameters: {
 		type: "object",
@@ -112,6 +112,21 @@ The AI agent should be given these instructions so it knows how to instruct the 
 						check: {
 							type: "boolean",
 							description: "whether to check or uncheck radio button",
+						},
+						multipleFiles: {
+							type: "boolean",
+							description: "whether to upload multiple files",
+						},
+						filepath: {
+							type: "string",
+							description: "file path for single file to upload",
+						},
+						filepaths: {
+							type: "array",
+							items: {
+								type: "string",
+							},
+							description: "file paths for multiple files to be uploaded",
 						},
 					},
 				},
@@ -245,6 +260,35 @@ The `search` definition is an object with the following properties
 		},
 	},
 	required: ["query"],
+},
+```
+
+## Find code
+
+This action finds code blocks with headers and descriptive text
+
+The results of this action can be fed to the AI or external agent and be used to increase the code knowledge base to guide further action based on the sample code
+
+### Find code definition
+
+The `find_code` definition is an object with the following properties
+
+- `codelineSelector` a selector to use within a code tag to identify each line of code
+
+```ts
+{
+	name: "find_code",
+	description: "Finds code blocks within headers containing optional descriptive text for the code",
+	parameters: {
+		type: "object",
+		properties: {
+			codelineSelector: {
+				type: "string",
+				description: "selector to use within a code tag to identify each line of code",
+			}
+		},
+	},
+	required: [],
 },
 ```
 

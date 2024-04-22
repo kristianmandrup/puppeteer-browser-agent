@@ -258,8 +258,9 @@ These actions are:
 - `EnterDataAction` to enter data into form fields and (optionally) submit the form
 - `TakeScreenshotAction` to take a screenshot of the page or starting from a specific element of interest
 - `SearchAction` searches for search results using a search engine of choice
+- `FindCodeAction` finds code blocks with headers and descriptive text
 
-These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
+Many of these actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include most of the required infrastructure.
 
 A number of actions are left as placeholders and have yet to be implemented
 

@@ -81,7 +81,9 @@ export class SearchAction extends ElementAction implements ISearchAction {
 			);
 		}
 		this.onStartScraping();
-		this.searchResults = await this.getSearchResults();
+		const searchResults = await this.getSearchResults();
+		this.addToMessage(`search results found: ${JSON.stringify(searchResults)}`);
+		this.searchResults = searchResults;
 	}
 
 	async gotoUrl(url: string) {

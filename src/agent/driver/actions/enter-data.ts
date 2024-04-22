@@ -14,7 +14,10 @@ export interface IFieldData {
 	name?: string;
 	select?: string[];
 	index?: number;
-	check: boolean;
+	check?: boolean;
+	multipleFiles?: boolean;
+	filepath?: string;
+	filepaths?: string[];
 }
 
 export type TSelectAttrs = {
@@ -49,12 +52,6 @@ export class EnterDataFormAction
 
 	async selectElement(elementCssSelector: string) {
 		return await this.page?.$(elementCssSelector);
-	}
-
-	async handleToElement(element: ElementHandle<Element>): Promise<Element> {
-		return await element.evaluate((el: Element) => {
-			return el;
-		});
 	}
 
 	getElementAttr(element: Element, attrName: string) {
@@ -99,7 +96,12 @@ export class EnterDataFormAction
 		return tagName === "INPUT" && type === "text";
 	}
 
-	isTextAreaField({ tagName, type }: IElementDetails) {
+	// handle.uploadFile()
+	isFileInput({ tagName, type }: IElementDetails) {
+		return tagName === "INPUT" && type === "file";
+	}
+
+	isTextAreaField({ tagName }: IElementDetails) {
 		return tagName === "TEXTAREA";
 	}
 
@@ -111,6 +113,23 @@ export class EnterDataFormAction
 		if (this.isTextInputField(details) || this.isTextAreaField(details)) {
 			await this.typeTextIn(element, details, data);
 		}
+	}
+
+	async onFileField(
+		element: ElementHandle,
+		details: IElementDetails,
+		data: any,
+	) {
+		if (this.isFileInput(details)) {
+			await this.uploadFile(element as ElementHandle<HTMLInputElement>, data);
+		}
+	}
+
+	async uploadFile(handle: ElementHandle<HTMLInputElement>, data: any) {
+		if (data.multipleFiles) {
+			await handle.uploadFile(data.filepaths);
+		}
+		await handle.uploadFile(data.filepath);
 	}
 
 	protected hasMatchingOption(options: HTMLOptionsCollection, data: any) {
@@ -212,6 +231,7 @@ export class EnterDataFormAction
 		data: IFieldData,
 	) {
 		await this.onTextField(handle, details, data);
+		await this.onFileField(handle, details, data);
 		await this.onSelectField(handle, element, details, data);
 		await this.onRadioField(handle, element, details, data);
 	}
