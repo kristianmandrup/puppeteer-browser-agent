@@ -1,6 +1,12 @@
 # Puppeteer Browser Agent
 
-This library consists of a number of convenient building blocks that can be extended and assembled to create a Puppeteer browser agent. This browser agent can communicate with external actors, agents and users to instruct the browser agent to take browser actions to fulfill objectives accordinly.
+This library consists of a number of convenient building blocks that can be extended and assembled to create a Puppeteer browser agent.
+
+The browser agent can communicate with external actors, including agents and users, to instruct the browser agent to take actions to fulfill objectives according to a plan. Actions can creted or customized, added and removed to suit any purpose.
+
+- [Quick start](#quick-start)
+- [Design](#design)
+- [Contribute](#contribute)
 
 ## Inspiration
 
@@ -11,6 +17,10 @@ This library is based on original work from [unconv/puppeteer-gpt](https://githu
 ```
 npm i puppeteer-browser-agent
 ```
+
+## Technology
+
+The library is written in Typescript 5 and is best used leveraging strong typing.
 
 ## Quick start
 
@@ -87,7 +97,15 @@ export class MyAIController implements IAIController {
 
 ## Design
 
-The library is written in Typescript and this is the recommended usage environment.
+The library is designed around the following core concepts
+
+- [Planner](#planner)
+- [Driver](#driver)
+- [Step runner](#steprunner)
+- [Step handlers](#step-handlers)
+- [Actions](#actions)
+
+### Planner
 
 An implementation typically starts with a `planner` which implements `IAgentPlanner` or extends/uses the built-in `AgentPlanner` class.
 
@@ -107,6 +125,9 @@ public async start() {
 ```
 
 The `AgentPlanner` can use the `AgentDriver` to implement an agent driving the browser via puppeteer.
+
+### Driver
+
 The `AgentDriver` must implement `IAgentDriver` by supplying the async methods `start` and `run`.
 The `start` method should start the browser and do any initialization necessary.
 
@@ -135,7 +156,13 @@ protected async doStep() {
 }
 ```
 
-## StepRunner
+#### Registering agent actions
+
+The driver can register actions via the method `registerAction(action: IDriverAction, id?: string)` and remove actions via `removeAction(id: string)`.
+
+See the [Actions](#actions) section for a more detailed walk-through of how to use actions.
+
+### StepRunner
 
 The `run` method of `StepRunner` takes the `response` which contains step instructions.
 `run` is by default configured to do the following:
@@ -184,7 +211,7 @@ protected async getNextStep() {
 }
 ```
 
-## Step handlers
+### Step handlers
 
 The `handleStep` method iterates through the registered step handlers and executes each handler via their `handle` method, passing the `step` to be processed.
 
@@ -202,7 +229,7 @@ If the response has the shape of a function, the function attributes such as fun
 
 If the the response does not look like a function, the content handler will be called.
 
-## Interactions with outside agents
+#### Interactions with outside agents
 
 The `performInteraction` method does the following
 
@@ -218,11 +245,7 @@ await this.getNextStep();
 this.updateContext();
 ```
 
-## Registering agent actions
-
-The driver can register actions via the method `registerAction(action: IDriverAction, id?: string)` and remove actions via `removeAction(id: string)`.
-
-## Actions
+### Actions
 
 The library comes with a set of basic actions that can be used as starting point, to be extended or used as you find suitable. Each of these actions extends `DriverAction` and implements the `IDriverAction` interface which simply requires an async `execute` method.
 
@@ -231,7 +254,7 @@ These actions are:
 - `GotoUrlAction` to goto a given URL page
 - `ClickLinkAction` to click page links
 - `ReadFileAction` to read a file for instructions
-- `ReceiveInputAction` for user/agent input to instruct driver for decisions and actions
+- `CommunicateAction` answer user/agent with page summary and receive input to instruct driver in response
 - `EnterDataAction` to enter data into form fields and (optionally) submit the form
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
@@ -248,7 +271,7 @@ Any action must have an async `execute` function which performs the given action
 
 Action classes can extend either of the abstract classes `BaseDriverAction` or `ElementAction`, where `ElementAction` is useful for actions that directly interact with page elements, whereas `BaseDriverAction` is for more general actions, that do not interact with the page.
 
-## Action definitions
+### Action definitions
 
 Action definitions are used to inform the browser agent which actions are available and how to use them, similar to the tools of f.ex [CrewAI]()
 
@@ -304,11 +327,11 @@ Definitions are supplied to the `driver`, either directly or via the `planner` u
 
 Any `action` may include a `definition` property as well. If such a property exists on the `action`, this `definition` will be added automatically to the set of `definitions` when the `action` is registered with the `driver`.
 
-## Leveraging built-in Actions
+### Leveraging built-in Actions
 
 The [Actions](./Actions.md) guide describes how to leverage the built-in actions.
 
-## Customization
+### Customization
 
 See the [Customization example](./Customization.md) document which may act as a guide.
 

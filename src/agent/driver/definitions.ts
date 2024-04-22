@@ -58,15 +58,14 @@ export const actionDefinitions = [
 				},
 				pp_id: {
 					type: "number",
-					description:
-						"The pgpt-id of the link to click (from the page content)",
+					description: "The pp-id of the link to click (from the page content)",
 				},
 			},
 		},
 		required: ["reason", "pp_id"],
 	},
 	{
-		name: "type_text",
+		name: "enter_data",
 		description: "Types text to input fields and optionally submit the form",
 		parameters: {
 			type: "object",
@@ -121,9 +120,9 @@ export const actionDefinitions = [
 		required: ["form_data", "submit"],
 	},
 	{
-		name: "answer_user",
+		name: "communicate",
 		description:
-			"Give an answer to the user and end the navigation. Use when the given task has been completed. Summarize the relevant parts of the page content first and give an answer to the user based on that.",
+			"Provide an answer with a summary of the page to the user when the given task has been completed.",
 		parameters: {
 			type: "object",
 			properties: {
@@ -134,7 +133,8 @@ export const actionDefinitions = [
 				},
 				answer: {
 					type: "string",
-					description: "The response to the user",
+					description:
+						"The response to the external actor such as a human user or an automated agent",
 				},
 			},
 		},

@@ -21,16 +21,12 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 			throw new Error("Missing url to go to");
 		}
 		this.onStart(url);
-		const { waitUntil } = this;
 		if (!this.page) {
 			throw new Error("Missing page");
 		}
 		try {
-			await this.page?.goto(url, {
-				waitUntil,
-			});
-			url = await this.page?.url();
-
+			await this.gotoUrl(url);
+			url = await this.getUrl(url);
 			this.setMessage(`You are now on ${url}`);
 		} catch (error) {
 			const errMessage =
@@ -39,6 +35,21 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 		}
 		this.onStartScraping();
 		this.linksAndInputs = await this.getTabbableElements();
+	}
+
+	async gotoUrl(url: string) {
+		const { waitUntil } = this;
+		await this.page?.goto(url, {
+			waitUntil,
+		});
+	}
+
+	async getUrl(url: string) {
+		const { waitUntil } = this;
+		await this.page?.goto(url, {
+			waitUntil,
+		});
+		return await this.page?.url();
 	}
 
 	onStartScraping() {

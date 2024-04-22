@@ -8,13 +8,13 @@ export interface IReceiveInputAction extends IDriverAction {
 	receiveInput(msg: string): Promise<string>;
 }
 
-export class ReceiveInputAction
+export class CommunicateAction
 	extends BaseDriverAction
 	implements IReceiveInputAction
 {
 	costCalculator?: ITokenCostCalculator;
 	text?: string;
-	name = "receive_input";
+	name = "communicate";
 
 	protected initialize(): void {
 		this.costCalculator = this.createCostCalculator();
@@ -25,15 +25,17 @@ export class ReceiveInputAction
 	}
 
 	public async execute() {
+		this.prepareAnswer();
+		await this.receiveInput(this.promptAnswer);
+	}
+
+	protected prepareAnswer() {
 		this.setText(this.textFromFnArgs());
-
 		this.printCurrentCost();
+	}
 
-		if (this.autopilot) {
-			await this.receiveInput(this.autoPilotMsg);
-		} else {
-			await this.receiveInput(this.userMsg);
-		}
+	protected get promptAnswer() {
+		return this.autopilot ? this.autoPilotMsg : this.userMsg;
 	}
 
 	protected setText(text?: string) {
@@ -45,7 +47,7 @@ export class ReceiveInputAction
 	}
 
 	protected get userMsg() {
-		return `\nGPT: ${this.text}\nYou: `;
+		return `\nAI agent: ${this.text}\nYou: `;
 	}
 
 	protected get autoPilotMsg() {

@@ -71,9 +71,17 @@ export class ReadFileAction
 	}
 
 	public async execute() {
-		this.filename = this.fnArgs.filename;
+		this.prepareReadFile();
 		await this.attemptToReadFile();
 		this.handleCannotReadFile();
+	}
+
+	protected prepareReadFile() {
+		this.setFileName();
+	}
+
+	protected setFileName() {
+		this.filename = this.fnArgs.filename;
 	}
 
 	async getInput(msg: string) {
