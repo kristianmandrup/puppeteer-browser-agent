@@ -12,6 +12,19 @@ export abstract class ElementAction
 		return await this.elementSelector?.getElements(this.page);
 	}
 
+	async getContentFor(handle: ElementHandle, maxLength = 60) {
+		return await handle.evaluate((el: Element) => {
+			return `${el.textContent}`.slice(0, maxLength);
+		});
+	}
+
+	protected sliceOff(text?: string, length?: number) {
+		const maxLength = length || 32;
+		return text && text.length > maxLength
+			? `${text.substring(0, maxLength)}[..]`
+			: text;
+	}
+
 	async getContentForFirst(handle: ElementHandle, selector: string) {
 		return await handle.$eval(selector, (elem: Element) => elem.textContent);
 	}

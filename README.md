@@ -259,6 +259,7 @@ These actions are:
 - `TakeScreenshotAction` to take a screenshot of the page or starting from a specific element of interest
 - `SearchAction` searches for search results using a search engine of choice
 - `FindCodeAction` finds code blocks with headers and descriptive text
+- `SectionOutlineAction` creates an outline of the main sections of the page
 
 Many of these actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include most of the required infrastructure.
 

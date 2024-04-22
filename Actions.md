@@ -269,7 +269,7 @@ This action finds code blocks with headers and descriptive text
 
 The results of this action can be fed to the AI or external agent and be used to increase the code knowledge base to guide further action based on the sample code
 
-### Find code definition
+### Find code action definition
 
 The `find_code` definition is an object with the following properties
 
@@ -285,6 +285,36 @@ The `find_code` definition is an object with the following properties
 			codelineSelector: {
 				type: "string",
 				description: "selector to use within a code tag to identify each line of code",
+			}
+		},
+	},
+	required: [],
+},
+```
+
+## Section outline
+
+This action creates a section outline for the main sections on the page
+
+The results of this action can be fed to the AI or external agent to inform it of the overall structure and content on the page to guide further action
+
+### Section outline action definition
+
+The `find_code` definition is an object with the following properties
+
+- `maxSectionTextSize` max number of characters to include for a section of text
+
+```ts
+{
+	name: "section_outline",
+	description: "creates an outline of the main sections of the page",
+	parameters: {
+		type: "object",
+		properties: {
+			maxSectionTextSize: {
+				type: "number",
+				description: "max number of characters to include for a section of text",
+				default: 200
 			}
 		},
 	},
