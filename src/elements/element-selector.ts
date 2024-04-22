@@ -55,10 +55,20 @@ export class ElementSelector implements IElementSelector {
 	}
 
 	protected get elementSelector() {
-		return 'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"]), select:not([disabled]), a[href]:not([href="javascript:void(0)"]):not([href="#"])';
+		return this.selectors.join(",");
 	}
 
-	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+	get selectors() {
+		return [
+			"input:not([type=hidden]):not([disabled])",
+			"textarea:not([disabled])",
+			"button:not([disabled])",
+			'[tabindex]:not([tabindex="-1"])',
+			"select:not([disabled])",
+			'a[href]:not([href="javascript:void(0)"]):not([href="#"])',
+		];
+	}
+
 	protected async getNext(
 		element: ElementHandle<Element>,
 		id: number,

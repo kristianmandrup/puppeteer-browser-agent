@@ -34,7 +34,7 @@ export class EnterDataFormAction
 {
 	formData: IFieldData[] = [];
 	prevInput?: ElementHandle;
-	// linksAndInputs: ElementHandle<Element>[] = [];
+	// interactiveElements: ElementHandle<Element>[] = [];
 	navigator: IPageNavigator;
 	taskName = "enter_data";
 
@@ -149,7 +149,11 @@ export class EnterDataFormAction
 				const matchedElements: Element[] = [];
 				for (const element of elements) {
 					const field = element as HTMLInputElement;
-					if (field.placeholder?.includes(text)) {
+					if (
+						field.placeholder
+							?.toLocaleLowerCase()
+							?.includes(text.toLocaleLowerCase())
+					) {
 						// element.style.border = '2px solid red'; // Highlighting matching elements
 						matchedElements.push(element);
 					}
@@ -169,7 +173,7 @@ export class EnterDataFormAction
 			(elements: Element[]) => {
 				const matchedElements: Element[] = [];
 				for (const element of elements) {
-					if (element.textContent?.includes(text)) {
+					if (this.matchesContent(element, text)) {
 						// element.style.border = '2px solid red'; // Highlighting matching elements
 						matchedElements.push(element);
 					}
@@ -453,11 +457,11 @@ export class EnterDataFormAction
 		}
 
 		this.log(`${this.taskPrefix}Scraping page...`);
-		this.setLinksAndInputs(await this.getTabbableElements());
+		this.setInteractiveElements(await this.getTabbableElements());
 	}
 
-	setLinksAndInputs(elements: ElementHandle<Element>[]) {
-		this.driver.setLinksAndInputs(elements);
+	setInteractiveElements(elements: ElementHandle<Element>[]) {
+		this.driver.setInteractiveElements(elements);
 	}
 
 	async getPageUrl() {

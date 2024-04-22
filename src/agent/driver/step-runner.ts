@@ -12,7 +12,7 @@ export interface IStepRunner {
 	run(step: any): Promise<void>;
 	noContent: boolean;
 	element?: ElementHandle<Element>;
-	linksAndInputs: ElementHandle<Element>[];
+	interactiveElements: ElementHandle<Element>[];
 	clearHandlers(): void;
 	registerHandler(handler: IResponseHandler): void;
 }
@@ -24,7 +24,7 @@ export type IStepRunnerOpts = DebugOpts & {
 export class StepRunner {
 	step: any;
 	element?: ElementHandle<Element>;
-	linksAndInputs: ElementHandle<Element>[] = [];
+	interactiveElements: ElementHandle<Element>[] = [];
 	driver: IAgentDriver;
 	debug = false;
 	opts: IStepRunnerOpts;

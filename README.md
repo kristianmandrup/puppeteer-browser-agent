@@ -256,6 +256,7 @@ These actions are:
 - `ReadFileAction` to read a file for instructions
 - `CommunicateAction` answer user/agent with page summary and receive input to instruct driver in response
 - `EnterDataAction` to enter data into form fields and (optionally) submit the form
+- `TakeScreenshotAction` to take a screenshot of the page or starting from a specific element of interest
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
 
@@ -265,7 +266,6 @@ A number of actions are left as placeholders and have yet to be implemented
 - `PageNavigationOutlineAction`
 - `PageSectionOutlineAction`
 - `GetSummaryAction`
-- `TakeScreenshotAction`
 
 Any action must have an async `execute` function which performs the given action.
 

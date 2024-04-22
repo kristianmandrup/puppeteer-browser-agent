@@ -58,7 +58,7 @@ A form field can be identified by either:
 - the `label` for the field to be matched with a `label` element or `placeholder` for the field
 - `name` of the field.
 
-Note that the `pp_id` will be added to elements previously collected from screen scraping the page, via `getTabbableElements` and setting `linksAndInputs`.
+Note that the `pp_id` will be added to elements previously collected from screen scraping the page, via `getTabbableElements` and setting `interactiveElements`.
 
 The data entered can be either:
 
@@ -137,7 +137,7 @@ The `click_link` definition is an object with the following properties
 - `text` the text of the link to click
 - `pp_id` the special id of the link to click
 
-The `pp_id` will be added to elements previously collected from screen scraping the page, via `getTabbableElements` and setting `linksAndInputs`.
+The `pp_id` will be added to elements previously collected from screen scraping the page, via `getTabbableElements` and setting `interactiveElements`.
 
 ```ts
 	{
@@ -178,7 +178,7 @@ try {
   this.setMessage(errMessage);
 }
 this.onStartScraping();
-this.linksAndInputs = await this.getTabbableElements();
+this.interactiveElements = await this.getTabbableElements();
 ```
 
 ### Goto url action definition
@@ -203,6 +203,65 @@ Note: Ideally there should be a `find_urls` action, which uses a search engine (
 		},
 	},
 	required: ["url"],
+},
+```
+
+## Take screenshot
+
+### Take screenshot action definition
+
+The `take_screenshot` definition is an object with the following properties
+
+- `parentType` the high-level type of the main parent element the element should be under such as main, footer, aside etc.
+- `parentId` an optional id of the main parent element
+- `type` of the element such as header, section or field
+- `id` optional id of the element
+- `selector` optional sub-selector to more precisely define the element to search for
+- `content` optional text content that the element should contain
+
+```ts
+{
+	name: "take_screenshot",
+	description:
+		"Takes a screenshot of the page or starting from a specific element.",
+	parameters: {
+		type: "object",
+		properties: {
+			filepath: {
+				type: "string",
+				description: "The filepath for where to store the screenshot"
+			},
+			parentType: {
+				type: "string",
+				description:
+					"the type of parent the element under, including: main, footer, header, aside, dialog, nav, article, section, form",
+			},
+			parentId: {
+				type: "string",
+				description:
+					"the type of element including: header, section, field, form, canvas, figure, article, video, code",
+			},
+			type: {
+				type: "string",
+				description:
+					"the type of element including: header, section, field, form, canvas, figure, article, video, code",
+			},
+			id: {
+				type: "string",
+				description: "the id of the element",
+			},
+			selector: {
+				type: "string",
+				description:
+					"An optional more fine-grained CSS selector for the element in addition to the parentType, type, parentId and id",
+			},
+			content: {
+				type: "string",
+				description:
+					"Optional content that the element should contain to match",
+			},
+		},
+	},
 },
 ```
 

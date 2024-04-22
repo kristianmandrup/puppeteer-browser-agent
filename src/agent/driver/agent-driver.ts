@@ -51,7 +51,7 @@ export interface IAgentDriver {
 	start(): Promise<void>;
 	closeBrowser(): void;
 	run(agentState: IAgentState): Promise<void>;
-	doStep(linksAndInputs: any, element: any): Promise<void>;
+	doStep(interactiveElements: any, element: any): Promise<void>;
 	setMessage(msg: string): void;
 	addToMessage(message: string): void;
 	getInput(msg: string): Promise<string>;
@@ -78,7 +78,7 @@ export interface IAgentDriver {
 	inputController: IInputController;
 	messageBuilder: IMessageBuilder;
 	element?: ElementHandle<Element>;
-	setLinksAndInputs(elements: ElementHandle<Element>[]): void;
+	setInteractiveElements(elements: ElementHandle<Element>[]): void;
 	setNoContent(val: boolean): void;
 }
 export interface IAgentState {
@@ -127,12 +127,12 @@ export class AgentDriver implements IAgentDriver {
 		return this.stepRunner.element;
 	}
 
-	setLinksAndInputs(elements: ElementHandle<Element>[]) {
-		this.stepRunner.linksAndInputs = elements;
+	setInteractiveElements(elements: ElementHandle<Element>[]) {
+		this.stepRunner.interactiveElements = elements;
 	}
 
-	get linksAndInputs() {
-		return this.stepRunner.linksAndInputs;
+	get interactiveElements() {
+		return this.stepRunner.interactiveElements;
 	}
 
 	setNoContent(val: boolean) {

@@ -8,7 +8,7 @@ export interface IGotoUrlAction extends IDriverAction {}
 export type GotoUrlOpts = DebugOpts & {};
 export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 	waitUntil: PuppeteerLifeCycleEvent = "load";
-	linksAndInputs?: ElementHandle<Element>[];
+	interactiveElements?: ElementHandle<Element>[];
 	name = "goto_url";
 
 	onStart(url: string) {
@@ -34,7 +34,7 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 			this.setMessage(errMessage);
 		}
 		this.onStartScraping();
-		this.linksAndInputs = await this.getTabbableElements();
+		this.interactiveElements = await this.getTabbableElements();
 	}
 
 	async gotoUrl(url: string) {

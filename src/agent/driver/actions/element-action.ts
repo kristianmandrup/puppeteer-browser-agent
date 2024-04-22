@@ -12,6 +12,15 @@ export abstract class ElementAction
 		return await this.elementSelector?.getElements(this.page);
 	}
 
+	protected matchesContent(element: Element, content: string) {
+		return (
+			content &&
+			!element.textContent
+				?.toLocaleLowerCase()
+				?.includes(content.toLocaleLowerCase())
+		);
+	}
+
 	protected markerClass(id: number | string) {
 		return this.driver.markerClass(id);
 	}

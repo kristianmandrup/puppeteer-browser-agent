@@ -13,7 +13,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	linkText?: string;
 	userMsg?: string;
 	// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-	linksAndInputs: any;
+	interactiveElements: any;
 	url?: string;
 
 	requestCount = 0;
@@ -26,10 +26,10 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	constructor(
 		driver: IAgentDriver,
 		// biome-ignore lint/suspicious/noExplicitAny: <explanation>
-		linksAndInputs: any[],
+		interactiveElements: any[],
 	) {
 		super(driver);
-		this.linksAndInputs = linksAndInputs;
+		this.interactiveElements = interactiveElements;
 		this.navigator = this.createNavigator();
 	}
 
@@ -60,7 +60,7 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	}
 
 	protected findLink() {
-		return this.linksAndInputs.find(
+		return this.interactiveElements.find(
 			(elem: Element) => elem && elem.id === this.linkId,
 		);
 	}
@@ -170,7 +170,8 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	async scrapePage() {
 		this.validatePage();
 		this.logTask("Scraping page...");
-		this.linksAndInputs = this.page && (await this.getElementsOn(this.page));
+		this.interactiveElements =
+			this.page && (await this.getElementsOn(this.page));
 	}
 
 	getElementsOn(page: Page) {
