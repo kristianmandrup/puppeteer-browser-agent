@@ -274,6 +274,7 @@ The results of this action can be fed to the AI or external agent and be used to
 The `find_code` definition is an object with the following properties
 
 - `codelineSelector` a selector to use within a code tag to identify each line of code
+- `codeTitle` the section header title for the code to be extracted
 
 ```ts
 {
@@ -285,6 +286,10 @@ The `find_code` definition is an object with the following properties
 			codelineSelector: {
 				type: "string",
 				description: "selector to use within a code tag to identify each line of code",
+			},
+			codeTitle: {
+				type: "string",
+				description: "the section header title for the code to be extracted",
 			}
 		},
 	},
@@ -300,7 +305,7 @@ The results of this action can be fed to the AI or external agent to inform it o
 
 ### Section outline action definition
 
-The `find_code` definition is an object with the following properties
+The `section_outline` definition is an object with the following properties
 
 - `maxSectionTextSize` max number of characters to include for a section of text
 

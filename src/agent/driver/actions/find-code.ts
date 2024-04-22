@@ -32,16 +32,26 @@ export class FindCodeAction extends ElementAction {
 		return this.fnArgs.codelineSelector || "span.line";
 	}
 
+	get codeTitle() {
+		return this.fnArgs.codeTitle;
+	}
+
 	async execute() {
 		const headers = await this.page?.$$(this.headersSelector);
 		if (!headers) {
 			return;
 		}
+		const codeTitle = this.codeTitle;
+
 		const results: ICodeInfo[] = [];
 		for (const header of headers) {
+			// TODO: refactor
 			const title = await header.evaluate((el: Element) => {
 				return `${el.textContent}`;
 			});
+			if (codeTitle && !title.toLocaleLowerCase().includes(codeTitle)) {
+				continue;
+			}
 			const descriptions = await this.getContentForAll(header, "p");
 			const codeblocks = await this.getCodeLinesForAll(
 				header,

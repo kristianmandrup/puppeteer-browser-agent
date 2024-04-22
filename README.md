@@ -265,9 +265,7 @@ Many of these actions have been ported directly from GPT-puppeteer for now, but 
 
 A number of actions are left as placeholders and have yet to be implemented
 
-- `CodeSampleAction`
-- `PageNavigationOutlineAction`
-- `PageSectionOutlineAction`
+- `NavigationOutlineAction`
 - `GetSummaryAction`
 
 Any action must have an async `execute` function which performs the given action.
