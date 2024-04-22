@@ -257,6 +257,7 @@ These actions are:
 - `CommunicateAction` answer user/agent with page summary and receive input to instruct driver in response
 - `EnterDataAction` to enter data into form fields and (optionally) submit the form
 - `TakeScreenshotAction` to take a screenshot of the page or starting from a specific element of interest
+- `SearchAction` searches for search results using a search engine of choice
 
 These actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include the required infrastructure.
 

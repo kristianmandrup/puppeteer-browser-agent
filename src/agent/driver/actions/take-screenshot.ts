@@ -1,4 +1,7 @@
+import type { IDriverAction } from "./base-action";
 import { ElementAction } from "./element-action";
+
+export type ITakeScrenshotAction = IDriverAction;
 
 export type FindElementDetails = {
 	parentType:
@@ -28,7 +31,10 @@ export type FindElementDetails = {
 };
 
 // Takes a screenshot of the page
-export class TakeScrenshotAction extends ElementAction {
+export class TakeScrenshotAction
+	extends ElementAction
+	implements ITakeScrenshotAction
+{
 	name = "take_screenshot";
 
 	get filePath() {

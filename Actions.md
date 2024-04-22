@@ -206,6 +206,48 @@ Note: Ideally there should be a `find_urls` action, which uses a search engine (
 },
 ```
 
+## Search
+
+This action searches for search results using a search engine
+The core of the `execute` method is as follows
+
+```ts
+this.onStart();
+await this.gotoUrl(this.queryUrl);
+this.onStartScraping();
+this.searchResults = await this.getSearchResults();
+```
+
+The results of this action can be fed to the AI or external agent and be used to decide which URL to goto using the `Goto URL` action
+
+### Search action definition
+
+The `search` definition is an object with the following properties
+
+- `searchEngine` name of a registered search engine to use for the search
+- `query` what to query for in the search engine
+
+```ts
+{
+	name: "search",
+	description: "Search for search results using a search engine",
+	parameters: {
+		type: "object",
+		properties: {
+			query: {
+				type: "string",
+				description: "What to query the search engine for",
+			},
+			searchEngine: {
+				type: "string",
+				description: "Name of the search engine to use",
+			},
+		},
+	},
+	required: ["query"],
+},
+```
+
 ## Take screenshot
 
 ### Take screenshot action definition
