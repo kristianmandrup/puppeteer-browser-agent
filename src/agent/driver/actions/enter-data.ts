@@ -12,9 +12,9 @@ export interface IFieldData {
 	text: string;
 	label?: string;
 	name?: string;
-	selected?: string[];
+	select?: string[];
 	index?: number;
-	checked: boolean;
+	check: boolean;
 }
 
 export type TSelectAttrs = {
@@ -139,18 +139,45 @@ export class EnterDataFormAction
 		return tagName === "INPUT" && type === "radio";
 	}
 
-	async findFieldWithPlaceholder(
-		name: string,
-	): Promise<ElementHandle | null | undefined> {
-		return await this.page?.$(
-			`input[placeholder=${name}], textarea[placeholder=${name}]`,
+	async findTextFieldWithPlaceholder(
+		selector: string,
+		text: string,
+	): Promise<Element | null | undefined> {
+		const elementsWithText = await this.page?.$$eval(
+			selector,
+			(elements: Element[]) => {
+				const matchedElements: Element[] = [];
+				for (const element of elements) {
+					const field = element as HTMLInputElement;
+					if (field.placeholder?.includes(text)) {
+						// element.style.border = '2px solid red'; // Highlighting matching elements
+						matchedElements.push(element);
+					}
+				}
+				return matchedElements;
+			},
 		);
+		return elementsWithText?.[0];
 	}
 
-	async findHandleForLabelNamed(
-		name: string,
-	): Promise<ElementHandle | null | undefined> {
-		return await this.page?.$(`label[for=${name}]`);
+	async findElementWithText(
+		selector: string,
+		text: string,
+	): Promise<Element | null | undefined> {
+		const elementsWithText = await this.page?.$$eval(
+			selector,
+			(elements: Element[]) => {
+				const matchedElements: Element[] = [];
+				for (const element of elements) {
+					if (element.textContent?.includes(text)) {
+						// element.style.border = '2px solid red'; // Highlighting matching elements
+						matchedElements.push(element);
+					}
+				}
+				return matchedElements;
+			},
+		);
+		return elementsWithText?.[0];
 	}
 
 	async findHandleForFieldNamed(
@@ -213,9 +240,9 @@ export class EnterDataFormAction
 		data: IFieldData,
 	) {
 		const text = data.text;
-		const shouldCheck = data.checked || this.checkAnswers.includes(text);
+		const shouldCheck = data.check || this.checkAnswers.includes(text);
 		const shouldUncheck =
-			data.checked === false || this.uncheckAnswers.includes(text);
+			data.check === false || this.uncheckAnswers.includes(text);
 		if (!checked && shouldCheck) {
 			await this.clickRadio(handle, details, !checked);
 		}
@@ -228,32 +255,63 @@ export class EnterDataFormAction
 		if (!select.multiple) {
 			return;
 		}
-		for (const opt of Array.from(select.selectedOptions)) {
-			opt.selected = false;
+		const options = Array.from(select.selectedOptions);
+		for (const option of options) {
+			option.selected = false;
 		}
 	}
 
 	async selectOptionsOn(
-		element: ElementHandle,
+		handle: ElementHandle,
 		details: IElementDetails,
 		select: TSelectAttrs,
 		data: IFieldData,
 	) {
-		const name = details.name;
-		if (select.multiple) {
-			const options = data.selected || data.text.split(",");
-			for (const opt of options) {
-				this.prevInput = element;
-				await element.select(opt);
-				this.log(`${this.taskPrefix}Selecting opt in ${name}`);
-				this.addToMessage(
-					`Selected "${opt}" option for select element "${name}"\n`,
-				);
-			}
+		(await this.selectMultipleOptions(handle, details, select, data)) ||
+			(await this.selectSingleOption(handle, select, data));
+	}
+
+	async selectSingleOption(
+		handle: ElementHandle,
+		select: TSelectAttrs,
+		data: IFieldData,
+	) {
+		const index = data.index;
+		const options = Array.from(select.selectedOptions);
+		const option = index && index >= 0 ? options[index]?.text : data.text;
+		if (option) {
+			await handle.select(option);
+		}
+	}
+
+	async selectMultipleOptions(
+		handle: ElementHandle,
+		details: IElementDetails,
+		select: TSelectAttrs,
+		data: IFieldData,
+	) {
+		if (!select.multiple) {
 			return;
 		}
-		const text = data.text;
-		await element.select(text);
+		const options = data.select || data.text.split(",");
+		for (const option of options) {
+			await this.selectOptionFor(handle, details, option);
+		}
+		return true;
+	}
+
+	async selectOptionFor(
+		handle: ElementHandle,
+		details: IElementDetails,
+		option: string,
+	) {
+		const name = details.name;
+		this.prevInput = handle;
+		await handle.select(option);
+		this.log(`${this.taskPrefix}Selecting opt in ${name}`);
+		this.addToMessage(
+			`Selected "${option}" option for select element "${name}"\n`,
+		);
 	}
 
 	async typeTextIn(
@@ -311,7 +369,7 @@ export class EnterDataFormAction
 		if (!label) {
 			return;
 		}
-		return await this.findFieldWithPlaceholder(label);
+		return await this.findTextFieldWithPlaceholder("input, textarea", label);
 	}
 
 	async getFieldHandleByLabel(data: IFieldData) {
@@ -319,11 +377,8 @@ export class EnterDataFormAction
 		if (!label) {
 			return;
 		}
-		const labelHandle = await this.findHandleForLabelNamed(label);
-		if (labelHandle) {
-			const labelElement = await this.handleToElement(labelHandle);
-			return await this.findFieldForLabel(labelElement);
-		}
+		const labelElement = await this.findElementWithText("label", label);
+		return labelElement && (await this.findFieldForLabel(labelElement));
 	}
 
 	async getFieldHandleById(data: IFieldData) {

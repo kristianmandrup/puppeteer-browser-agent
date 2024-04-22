@@ -304,6 +304,10 @@ Definitions are supplied to the `driver`, either directly or via the `planner` u
 
 Any `action` may include a `definition` property as well. If such a property exists on the `action`, this `definition` will be added automatically to the set of `definitions` when the `action` is registered with the `driver`.
 
+## Leveraging built-in Actions
+
+The [Actions](./Actions.md) guide describes how to leverage the built-in actions.
+
 ## Customization
 
 See the [Customization example](./Customization.md) document which may act as a guide.

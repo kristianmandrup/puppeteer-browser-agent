@@ -105,7 +105,7 @@ export const actionDefinitions = [
 								type: "number",
 								description: "index number of option to select",
 							},
-							checked: {
+							check: {
 								type: "boolean",
 								description: "whether to check or uncheck radio button",
 							},
