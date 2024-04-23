@@ -29,7 +29,7 @@ export class FindCodeAction extends ElementAction {
 	}
 
 	get lineSelector() {
-		return this.fnArgs.codelineSelector || "span.line";
+		return this.fnArgs.lineSelector || "span.line";
 	}
 
 	get codeTitle() {
