@@ -7,6 +7,10 @@ This guide describes how to use and leverage the built-in actions
 - [Click link](#click-link)
 - [Goto URL](#goto-url)
 - [Communicate](#communicate)
+- [Find code](#find-code)
+- [Section outline](#section-outline)
+- [Navigation outlines](#navigation-outline)
+- [Take screenshot](#take-screenshot)
 
 ## Read file
 
@@ -321,6 +325,29 @@ The `section_outline` definition is an object with the following properties
 				description: "max number of characters to include for a section of text",
 				default: 200
 			}
+		},
+	},
+	required: [],
+},
+```
+
+## Navigation outline
+
+This action creates a navigation outline for the navigation sections on the page
+
+The results of this action can be fed to the AI or external agent to inform it of the overall navigation structure to guide navigation to find the pages to handle the overall objectives of the plan
+
+### Navigation outline action definition
+
+The `navigation_outline` definition is an object with the following properties
+
+```ts
+{
+	name: "navigation_outline",
+	description: "creates a navigation outline of the main navigation sections on the page",
+	parameters: {
+		type: "object",
+		properties: {
 		},
 	},
 	required: [],

@@ -89,7 +89,7 @@ export class ReadFileAction
 	}
 
 	get askToReadFileMsg() {
-		return `\nGPT: I want to read the file ${this.filename}\nDo you allow this? (y/n): `;
+		return `\nAI agent: I want to read the file ${this.filename}\nDo you allow this? (y/n): `;
 	}
 
 	async shouldReadFile() {

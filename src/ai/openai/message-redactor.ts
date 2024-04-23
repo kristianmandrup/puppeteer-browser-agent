@@ -2,10 +2,10 @@ import fs from "node:fs";
 import type { DebugOpts } from "../../types";
 import type { IAgentDriver } from "../../agent";
 
-export interface AIMessageRedacter {
+export interface AIMessageRedactor {
 	redactMessages(messages: any[]): string[];
 }
-export class OpenAIMessageRedacter implements AIMessageRedacter {
+export class OpenAIMessageRedactor implements AIMessageRedactor {
 	currentUrl = "";
 	debug: boolean;
 	driver: IAgentDriver;

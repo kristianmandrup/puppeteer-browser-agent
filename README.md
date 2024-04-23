@@ -260,13 +260,11 @@ These actions are:
 - `SearchAction` searches for search results using a search engine of choice
 - `FindCodeAction` finds code blocks with headers and descriptive text
 - `SectionOutlineAction` creates an outline of the main sections of the page
+- `NavigationOutlineAction` creates an outline of the main navigation sections of the page
 
-Many of these actions have been ported directly from GPT-puppeteer for now, but can be refined further as needed. Some actions may currently be incomplete but should include most of the required infrastructure.
+Some of these actions have been ported directly from GPT-puppeteer. They can be refined and customized as needed to suit your requirements.
 
-A number of actions are left as placeholders and have yet to be implemented
-
-- `NavigationOutlineAction`
-- `GetSummaryAction`
+Note that for the `TakeScreenshot` action, a `SimpleGPTVision` adapter class is made available, that can be worked into an `IResponseController` implementation, so that the screenshot can be uploaded to the GPT vision API. Adapters can also be implemented and used for other Vision APIs using a similar approach.
 
 Any action must have an async `execute` function which performs the given action.
 

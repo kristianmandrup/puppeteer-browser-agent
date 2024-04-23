@@ -73,6 +73,7 @@
 	},
 	"dependencies": {
 		"cheerio": "^1.0.0-rc.12",
+		"openai": "^4.38.3",
 		"puppeteer": "^22.6.4"
 	}
 }

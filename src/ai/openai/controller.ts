@@ -1,6 +1,6 @@
 import type { IAgentDriver } from "../../agent";
 import type { DebugOpts } from "../../types";
-import { OpenAIMessageRedacter } from "./message-redacter";
+import { OpenAIMessageRedactor } from "./message-redactor";
 
 export interface IAIController {
 	getResponse(messages: any[], definitions: any[], fnCall: any): Promise<any>;
@@ -10,7 +10,7 @@ export class OpenAIController {
 	definitions: any[] = [];
 	debug: boolean;
 	model = "gpt-3.5";
-	redacter: OpenAIMessageRedacter;
+	redacter: OpenAIMessageRedactor;
 	opts: DebugOpts = {};
 
 	get openaiApiKey() {
@@ -26,7 +26,7 @@ export class OpenAIController {
 		this.definitions = definitions;
 		this.debug = Boolean(opts.debug);
 		this.opts = opts;
-		this.redacter = new OpenAIMessageRedacter(driver, this.opts);
+		this.redacter = new OpenAIMessageRedactor(driver, this.opts);
 	}
 
 	get apiEndpoint() {
