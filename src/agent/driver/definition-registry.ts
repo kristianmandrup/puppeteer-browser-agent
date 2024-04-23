@@ -1,4 +1,4 @@
-import { actionDefinitions } from "./definitions.js";
+import { actionDefinitions } from "./actions/definitions";
 
 export interface IActionDefinitionsRegistry {
 	definitions: any[];

@@ -9,3 +9,4 @@ export * from "./search";
 export * from "./navigation-outline";
 export * from "./section-outline";
 export * from "./take-screenshot";
+export * from "./definitions";

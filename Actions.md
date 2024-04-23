@@ -277,7 +277,7 @@ The results of this action can be fed to the AI or external agent and be used to
 
 The `find_code` definition is an object with the following properties
 
-- `codelineSelector` a selector to use within a code tag to identify each line of code
+- `lineSelector` a selector to use within a code tag to identify each line of code
 - `codeTitle` the section header title for the code to be extracted
 
 ```ts
@@ -287,7 +287,7 @@ The `find_code` definition is an object with the following properties
 	parameters: {
 		type: "object",
 		properties: {
-			codelineSelector: {
+			lineSelector: {
 				type: "string",
 				description: "selector to use within a code tag to identify each line of code",
 			},
