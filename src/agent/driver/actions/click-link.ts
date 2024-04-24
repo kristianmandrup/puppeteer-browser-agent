@@ -3,6 +3,7 @@ import type { IAgentDriver } from "../agent-driver";
 import type { IDriverAction } from "./base-action";
 import { PageNavigator, type IPageNavigator } from "../document";
 import { ElementAction } from "./element-action";
+import { clickLink } from "./definitions/click-link";
 
 export interface IClickLinkAction extends IDriverAction {}
 
@@ -22,6 +23,8 @@ export class ClickLinkAction extends ElementAction implements IClickLinkAction {
 	navigator: IPageNavigator;
 
 	name = "click_link";
+
+	definition = clickLink;
 
 	constructor(
 		driver: IAgentDriver,

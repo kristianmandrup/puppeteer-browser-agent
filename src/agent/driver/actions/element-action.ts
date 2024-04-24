@@ -1,10 +1,65 @@
 import type { ElementHandle } from "puppeteer";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
+import { getCssSelector } from "css-selector-generator";
 
 export abstract class ElementAction
 	extends BaseDriverAction
 	implements IDriverAction
 {
+	protected getCssSelector(elem: Element): string {
+		return getCssSelector(elem);
+	}
+
+	protected getRelevantTextBeforeNextHeader(headingElement: Element) {
+		const excludeSelector = 'header, footer, nav, aside, div.sidebar, code, table, figure, dialog, modal';
+		const excludedElements = headingElement.parentElement?.querySelectorAll(excludeSelector);
+		let excludedSet = new Set<Element>([]) 
+		if (excludedElements) {
+			excludedSet = new Set(Array.from(excludedElements));
+		}		
+		
+		let textBeforeNextHeader = '';
+		let currentNode = headingElement.nextElementSibling;
+	
+		while (currentNode) {
+			if (currentNode.tagName && currentNode.tagName.match(/^H[1-6]$/)) {
+				break;
+			}
+			if (!excludedSet.has(currentNode)) {
+				textBeforeNextHeader += currentNode.textContent;
+			}
+			currentNode = currentNode.nextElementSibling;
+		}
+	
+		return textBeforeNextHeader;
+	}
+
+	protected findNearestHeadingElement(startElement: Element) {
+		let nearestHeading = null;
+		let currentNode = startElement.previousElementSibling;
+
+		while (currentNode) {
+			if (currentNode.tagName && currentNode.tagName.match(/^H[1-6]$/)) {
+				nearestHeading = currentNode;
+				break;
+			}
+			currentNode = currentNode.previousElementSibling;
+		}
+
+		if (!nearestHeading) {
+			currentNode = startElement.parentElement;
+			while (currentNode) {
+				if (currentNode.tagName && currentNode.tagName.match(/^H[1-6]$/)) {
+					nearestHeading = currentNode;
+					break;
+				}
+				currentNode = currentNode.parentElement;
+			}
+		}
+
+		return nearestHeading ? nearestHeading : undefined;
+	}
+
 	protected async getTabbableElements() {
 		if (!this.page) {
 			throw new Error("Missing page");

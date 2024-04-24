@@ -1,5 +1,6 @@
 import { BaseDriverAction, type IDriverAction } from "./base-action";
 import fs from "node:fs";
+import { readFile } from "./definitions/read-file";
 
 export interface IReadFileAction extends IDriverAction {
 	readFile(): Promise<boolean>;
@@ -13,6 +14,7 @@ export class ReadFileAction
 	contextLengthLimit = 4000;
 	skipFile = false;
 	name = "read_file";
+	definition = readFile;
 
 	onStartTask() {
 		this.logTask(`Reading file ${this.filename}`);

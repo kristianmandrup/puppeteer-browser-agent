@@ -1,11 +1,17 @@
+import { navigationOutline } from "./definitions/navigation-outline";
 import { ElementAction } from "./element-action";
 
 // determines the page outline in terms of navigation elements, such as navigation menu, anchors etc
 export class NavigationOutlineAction extends ElementAction {
 	name = "navigation_outline";
+	definition = navigationOutline;
+
+	get defaultNavSelector() {
+		return "header,footer,nav,aside,.menu,.sidebar,.topmenu,.sidemenu,.leftmenu,.topbar";
+	}
 
 	get navSelector() {
-		return "header,footer,nav,aside,.menu,.sidebar,.topmenu,.sidemenu";
+		return this.fnArgs.navSelector || this.defaultNavSelector
 	}
 
 	getLinkInfoFor(element: HTMLAnchorElement) {

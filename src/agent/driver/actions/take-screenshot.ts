@@ -1,10 +1,11 @@
 import type { IDriverAction } from "./base-action";
+import { takeScreenshot } from "./definitions/take-screenshot";
 import { ElementAction } from "./element-action";
 
 export type ITakeScrenshotAction = IDriverAction;
 
 export type FindElementDetails = {
-	parentType:
+	parentType?:
 		| "main"
 		| "footer"
 		| "header"
@@ -14,7 +15,7 @@ export type FindElementDetails = {
 		| "article"
 		| "section"
 		| "form";
-	parentId: string;
+	parentId?: string;
 	type:
 		| "header"
 		| "section"
@@ -24,10 +25,12 @@ export type FindElementDetails = {
 		| "figure"
 		| "article"
 		| "video"
-		| "code";
-	id: string;
-	selector: string;
-	content: string;
+		| "code"
+		| "table"
+
+	id?: string;
+	selector?: string;
+	content?: string;
 };
 
 // Takes a screenshot of the page
@@ -36,6 +39,7 @@ export class TakeScrenshotAction
 	implements ITakeScrenshotAction
 {
 	name = "take_screenshot";
+	definition = takeScreenshot;
 
 	get filePath() {
 		return this.fnArgs.filepath;
@@ -92,8 +96,8 @@ export class TakeScrenshotAction
 		const mainSelector = this.mainSelector(startFrom);
 		const subSelector = startFrom.selector;
 		const { id, parentId } = startFrom;
-		const idSel = this.idSelector(id);
-		const parentIdSel = this.idSelector(parentId);
+		const idSel = id ? this.idSelector(id) : '';
+		const parentIdSel = parentId ? this.idSelector(parentId) : '';
 		return `${parentSelector}${parentIdSel} ${mainSelector}${idSel}${subSelector}`;
 	}
 
@@ -106,7 +110,7 @@ export class TakeScrenshotAction
 			return;
 		}
 		const found = await handle.evaluate((element: Element) => {
-			if (this.matchesContent(element, content)) {
+			if (content && this.matchesContent(element, content)) {
 				return;
 			}
 			return element;

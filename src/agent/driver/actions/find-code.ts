@@ -1,31 +1,22 @@
 import type { ElementHandle } from "puppeteer";
 import { ElementAction } from "./element-action";
+import { findCode } from "./definitions/find-code";
 
 export type ICodeInfo = {
 	title: string;
-	descriptions: string[];
-	codeblocks: string[];
+	descriptions: string;
+	code: string;
 };
 
 export class FindCodeAction extends ElementAction {
 	name = "find_code";
+	definition = findCode;
 
-	get headersSelector() {
-		return "h1,h2,h3,h4";
-	}
-
-	async getCodeLinesForAll(
-		mainHandle: ElementHandle,
+	async getCodeLinesFor(
+		codeHandle: ElementHandle,
 		lineSelector = "span.line",
 	) {
-		const codehandles = await mainHandle.$$("code");
-		const results: string[] = [];
-		for (const codeHandle of codehandles) {
-			const lines = await this.getContentForAll(codeHandle, lineSelector);
-			const code = lines.join("\n");
-			results.push(code);
-		}
-		return results;
+		return await this.getContentForAll(codeHandle, lineSelector);
 	}
 
 	get lineSelector() {
@@ -37,30 +28,33 @@ export class FindCodeAction extends ElementAction {
 	}
 
 	async execute() {
-		const headers = await this.page?.$$(this.headersSelector);
-		if (!headers) {
+		const codeBlocks = await this.page?.$$('code');
+		if (!codeBlocks) {
 			return;
 		}
 		const codeTitle = this.codeTitle;
 
 		const results: ICodeInfo[] = [];
-		for (const header of headers) {
-			// TODO: refactor
-			const title = await header.evaluate((el: Element) => {
-				return `${el.textContent}`;
-			});
-			if (codeTitle && !title.toLocaleLowerCase().includes(codeTitle)) {
+		for (const codeBlock of codeBlocks) {
+			const codeBlockElem = await this.handleToElement(codeBlock)
+			const nearestHeader = this.findNearestHeadingElement(codeBlockElem)
+
+			const title = nearestHeader?.textContent
+			if (codeTitle && !title?.toLocaleLowerCase().includes(codeTitle)) {
 				continue;
 			}
-			const descriptions = await this.getContentForAll(header, "p");
-			const codeblocks = await this.getCodeLinesForAll(
-				header,
+			if (!title) {
+				continue
+			}
+			const descriptions = await this.getRelevantTextBeforeNextHeader(codeBlockElem);
+			const lines = await this.getCodeLinesFor(
+				codeBlock,
 				this.lineSelector,
 			);
 			const result: ICodeInfo = {
 				title,
-				descriptions,
-				codeblocks,
+				descriptions: descriptions ?? undefined,
+				code: lines.join('\n'),
 			};
 			results.push(result);
 		}

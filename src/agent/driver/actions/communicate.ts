@@ -3,7 +3,7 @@ import {
 	OpenAITokenCostCalculator,
 } from "../../../ai/openai/token-cost-calculator";
 import { BaseDriverAction, type IDriverAction } from "./base-action";
-
+import { communicate } from "./definitions/communicate";
 export interface IReceiveInputAction extends IDriverAction {
 	receiveInput(msg: string): Promise<string>;
 }
@@ -15,6 +15,7 @@ export class CommunicateAction
 	costCalculator?: ITokenCostCalculator;
 	text?: string;
 	name = "communicate";
+	definition = communicate;
 
 	protected initialize(): void {
 		this.costCalculator = this.createCostCalculator();

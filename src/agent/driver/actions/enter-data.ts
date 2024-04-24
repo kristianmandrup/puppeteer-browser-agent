@@ -4,6 +4,7 @@ import { PageNavigator, type IPageNavigator } from "../document";
 import type { IAgentDriver } from "../agent-driver";
 import type { DebugOpts } from "../../../types";
 import { ElementAction } from "./element-action";
+import { enterData } from "./definitions/enter-data";
 
 export interface IEnterDataAction extends IDriverAction {}
 
@@ -40,6 +41,7 @@ export class EnterDataFormAction
 	// interactiveElements: ElementHandle<Element>[] = [];
 	navigator: IPageNavigator;
 	taskName = "enter_data";
+	definition = enterData;
 
 	constructor(driver: IAgentDriver, opts: DebugOpts = {}) {
 		super(driver, opts);

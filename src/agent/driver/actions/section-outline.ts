@@ -1,9 +1,11 @@
 import type { ElementHandle } from "puppeteer";
 import { ElementAction } from "./element-action";
+import { sectionOutline } from "./definitions/section-outline";
 
 // returns the page outline from the title and top header-like elements
 export class SectionOutlineAction extends ElementAction {
 	taskName = "section_outline";
+	definition = sectionOutline;
 
 	get maxSectionTextSize() {
 		return this.fnArgs.maxTextSize || 200;
@@ -22,7 +24,8 @@ export class SectionOutlineAction extends ElementAction {
 		const results: any[] = [{ title }];
 		for (const header of headers) {
 			const headerTitle = await this.getContentFor(header);
-			const text = await this.textContentFor(header);
+			const headerElem = await this.handleToElement(header)
+			const text = await this.getRelevantTextBeforeNextHeader(headerElem);
 			const result = {
 				header: headerTitle,
 				text,
@@ -31,13 +34,5 @@ export class SectionOutlineAction extends ElementAction {
 		}
 		const message = JSON.stringify(results);
 		this.addToMessage(message);
-	}
-
-	async textContentFor(handle: ElementHandle) {
-		const paragraphs = await handle.$$eval("p", (elements) =>
-			elements.map((elem) => `${elem.textContent}`),
-		);
-		const text = paragraphs.join("\n");
-		return this.sliceOff(text, this.maxSectionTextSize);
 	}
 }

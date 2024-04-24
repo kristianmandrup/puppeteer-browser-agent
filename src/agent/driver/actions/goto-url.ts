@@ -2,6 +2,7 @@ import type { ElementHandle, PuppeteerLifeCycleEvent } from "puppeteer";
 import type { IDriverAction } from "./base-action";
 import type { DebugOpts } from "../../../types";
 import { ElementAction } from "./element-action";
+import { gotoUrl } from "./definitions/goto-url";
 
 export interface IGotoUrlAction extends IDriverAction {}
 
@@ -10,6 +11,7 @@ export class GotoUrlAction extends ElementAction implements IGotoUrlAction {
 	waitUntil: PuppeteerLifeCycleEvent = "load";
 	interactiveElements?: ElementHandle<Element>[];
 	name = "goto_url";
+	definition = gotoUrl;
 
 	onStart(url: string) {
 		this.logTask(`Going to ${url}`);

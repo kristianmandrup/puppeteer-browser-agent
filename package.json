@@ -1,6 +1,6 @@
 {
 	"name": "puppeteer-browser-agent",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Puppeteer browser agent for use in AI agent systems",
 	"keywords": [
 		"puppeteer",
@@ -73,6 +73,7 @@
 	},
 	"dependencies": {
 		"cheerio": "^1.0.0-rc.12",
+		"css-selector-generator": "^3.6.7",
 		"openai": "^4.38.3",
 		"puppeteer": "^22.6.4"
 	}

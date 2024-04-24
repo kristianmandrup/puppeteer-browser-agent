@@ -341,6 +341,10 @@ The results of this action can be fed to the AI or external agent to inform it o
 
 The `navigation_outline` definition is an object with the following properties
 
+- `navSelector` a CSS selector of navigation elements to take into account for the outline
+
+If the `navSelector` is empty, a default `navSelector` will be used which tries to take all types of common navigation elements into account to create a navigation outline for the entire page
+
 ```ts
 {
 	name: "navigation_outline",
@@ -348,6 +352,10 @@ The `navigation_outline` definition is an object with the following properties
 	parameters: {
 		type: "object",
 		properties: {
+			navSelector: {
+				type: "string,
+				description: "CSS selector of navigation elements to take into account for the outline"
+			}
 		},
 	},
 	required: [],
